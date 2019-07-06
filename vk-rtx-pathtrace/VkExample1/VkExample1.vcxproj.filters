@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="hello_vulkan.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="..\common\manipulator.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\vk_context.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\imgui\imgui_impl_glfw_vulkan.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\obj_loader.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\vulkannv\vulkan_raytracing.cpp">
+      <Filter>libs\vulkannv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\RaytracingPipelineGenerator.cpp">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\ShaderBindingTableGenerator.cpp">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\TopLevelASGenerator.cpp">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\VKHelpers.cpp">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\BottomLevelASGenerator.cpp">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\DescriptorSetGenerator.cpp">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="hello_vulkan.h" />
+    <ClInclude Include="..\common\manipulator.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\tiny_obj_loader.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\vk_context.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_impl_glfw_vulkan.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\stb_rect_pack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\stb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\imgui\stb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\obj_loader.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\DescriptorSetGenerator.h">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\RaytracingPipelineGenerator.h">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\ShaderBindingTableGenerator.h">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\TopLevelASGenerator.h">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\VKHelpers.h">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\BottomLevelASGenerator.h">
+      <Filter>libs\vulkannv\nv_helpers_vk</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\libs\imgui\README.md">
+      <Filter>imgui</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{b37f53c8-5e75-434b-96ca-91022518b27e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{de130830-c1d3-408b-95b1-30ecf826cac4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{fccf3108-134b-42a6-a135-6d6e073b75e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs">
+      <UniqueIdentifier>{12db50dc-dcb2-4394-8876-43e99c4fc287}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs\vulkannv">
+      <UniqueIdentifier>{0fcfb0df-a9cf-4250-87ae-2191817d0df5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs\vulkannv\nv_helpers_vk">
+      <UniqueIdentifier>{729e12ef-3382-4016-90ac-392ecd0be0c5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\libs\imgui\LICENSE.txt">
+      <Filter>imgui</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <GLSLValidate Include="shaders\frag_shader.frag">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+    <GLSLValidate Include="shaders\vert_shader.vert">
+      <Filter>shaders</Filter>
+    </GLSLValidate>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="shaders\closesthit.rchit">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="shaders\miss.rmiss">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="shaders\raygen.rgen">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="shaders\intersect.rint">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="shaders\closesthitSphere.rchit">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>
