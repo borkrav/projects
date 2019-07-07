@@ -344,7 +344,7 @@ void HelloVulkan::loadModel(const std::string& filename)
 void HelloVulkan::createProcGeometry()
 {
 
-	m_AABB = std::vector<AABB>{ AABB{glm::vec3{-2.5, -0.5, -0.5}, glm::vec3{-1.5, 0.5, 0.5}} };
+	m_AABB = std::vector<AABB>{ AABB{glm::vec3{-0.5, 1.5, -0.5}, glm::vec3{0.5, 2.5, 0.5}} };
 	createAABBBuffer(m_AABB);
 }
 
@@ -683,11 +683,19 @@ void HelloVulkan::createGeometryInstances()
 {
 	// The importer always imports the geometry as a single instance, without a
 	// transform. Using a more complex importer, this should be adapted.
-	glm::mat4x4 mat = glm::mat4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-	m_geometryInstances.push_back(
-		{ m_vertexBuffer, m_nbVertices, 0, m_indexBuffer, m_nbIndices, 0, false, mat });
+	glm::mat4x4 mat1 = glm::mat4x4(	1, 0, 0, 0, 
+									0, 1, 0, 0, 
+									0, 0, 1, 0, 
+									0, 0, 0, 1);
+	glm::mat4x4 mat2 = glm::mat4x4(	1, 0, 0, 0, 
+									0, 1, 0, 0, 
+									0, 0, 1, 0, 
+									0, 0, 0, 1);
 
-	m_geometryInstances.push_back({ m_procBuffer, NULL, 0, NULL, NULL, 0, true, mat });
+	m_geometryInstances.push_back(
+		{ m_vertexBuffer, m_nbVertices, 0, m_indexBuffer, m_nbIndices, 0, false, mat1 });
+
+	m_geometryInstances.push_back({ m_procBuffer, NULL, 0, NULL, NULL, 0, true, mat2 });
 }
 
 
@@ -1086,8 +1094,8 @@ void HelloVulkan::createRaytracingPipeline()
 
 	m_hitGroupIndexSphere = pipelineGen.StartHitGroup();
 
-	closestHitModule = VkCtx.createShaderModule(readFile("shaders/closesthitSphere.rchit.spv"));
-	pipelineGen.AddHitShaderStage(closestHitModule, VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV);
+	VkShaderModule closestHitSphereModule = VkCtx.createShaderModule(readFile("shaders/closesthitSphere.rchit.spv"));
+	pipelineGen.AddHitShaderStage(closestHitSphereModule, VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV);
 
 	VkShaderModule intersectModule = VkCtx.createShaderModule(readFile("shaders/intersect.rint.spv"));
 	pipelineGen.AddHitShaderStage(intersectModule, VK_SHADER_STAGE_INTERSECTION_BIT_NV);
@@ -1107,6 +1115,7 @@ void HelloVulkan::createRaytracingPipeline()
 	vkDestroyShaderModule(VkCtx.getDevice(), rayGenModule, nullptr);
 	vkDestroyShaderModule(VkCtx.getDevice(), missModule, nullptr);
 	vkDestroyShaderModule(VkCtx.getDevice(), closestHitModule, nullptr);
+	vkDestroyShaderModule(VkCtx.getDevice(), closestHitSphereModule, nullptr);
 	vkDestroyShaderModule(VkCtx.getDevice(), intersectModule, nullptr);
 }
 

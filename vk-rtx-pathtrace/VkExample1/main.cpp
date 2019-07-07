@@ -18,7 +18,7 @@
 #include "vk_context.h"
 
 static bool g_ResizeWanted = false;
-static int  g_winWidth = 1280, g_winHeight = 720;
+static int  g_winWidth = 1650, g_winHeight = 1200;
 
 //////////////////////////////////////////////////////////////////////////
 #define UNUSED(x) (void)(x)
@@ -131,7 +131,9 @@ int main(int argc, char** argv)
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* window = glfwCreateWindow(g_winWidth, g_winHeight,
-		"NVIDIA Vulkan Raytracing Tutorial", nullptr, nullptr);
+		"vk-rtx-pathtrace", nullptr, nullptr);
+
+	glfwSetWindowPos(window, 10, 100);
 
 	glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
 	glfwSetScrollCallback(window, on_scrollCallback);
@@ -143,7 +145,7 @@ int main(int argc, char** argv)
 
 	// Setup camera
 	CameraManip.setWindowSize(g_winWidth, g_winHeight);
-	CameraManip.setLookat(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	CameraManip.setLookat(glm::vec3(1.0f, 2.0f, 3.0f), glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
 
 	// Setup Vulkan
 	if (!glfwVulkanSupported())
@@ -229,7 +231,7 @@ int main(int argc, char** argv)
 	helloVulkan.createRaytracingPipeline();
 	helloVulkan.createShaderBindingTable();
 
-	bool use_raster_render = true;
+	bool use_raster_render = false;
 
 
 	ImVec4 clear_color = ImVec4(1, 1, 1, 1.00f);

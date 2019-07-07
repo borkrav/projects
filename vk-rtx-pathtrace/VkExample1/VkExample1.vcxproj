@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\libs\imgui\README.md" />
+    <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\libs\imgui\LICENSE.txt" />

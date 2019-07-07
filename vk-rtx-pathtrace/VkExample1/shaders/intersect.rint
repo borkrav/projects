@@ -2,9 +2,69 @@
 #extension GL_NV_ray_tracing : require
 
 //layout(location = 0) rayPayloadInNV vec3 hitValue;
-hitAttributeNV vec3 attribs;
+hitAttributeNV vec4 attribs;
 
 void main()
 {
- reportIntersectionNV(10, 0);
+
+	//fetch ray information
+	const vec3 origin = gl_WorldRayOriginNV;
+	const vec3 direction = gl_WorldRayDirectionNV;
+	const float tMin = gl_RayTminNV;
+	const float tMax = gl_RayTmaxNV;
+
+	//for now, hardcoded sphere information
+	const vec3 center = vec3(0,2,0);
+	const float radius = 0.5;
+
+
+	/*
+		sphere is defined by x^2 + y^2 + z^2 = R^2
+		ray is defined by O + t*d
+
+		(O + t*d)^2 - R^2 = 0
+
+		O^2 + (Dt)^2 + 2ODt - R^2 = 0
+
+		O^2 + D^2 T^2 + 2ODt - R^2 = 0
+
+		f(T) = D^2(T^2) + 2OD(t) + (O^2-R^2)
+
+		quadtratic equation, solve for T
+
+		a = D^2
+		b = 2OD
+		c = O^2 - R^2
+
+	*/
+
+	vec3 oc = origin - center;
+	float a = dot(direction, direction);
+	float b = 2 * dot(direction, oc);
+	float c = dot(oc, oc) - radius*radius;
+
+	float discr = b*b - 4*a*c;
+
+	if (discr >= 0){
+
+		float t0 = (-b + sqrt(discr))/(2*a);
+		float t1 = (-b - sqrt(discr))/(2*a);
+
+		//one intersection
+		if (t0 == t1){
+			reportIntersectionNV(t0, 0);
+			return;
+		}
+
+		//2 intersections
+		if (t0 > 0 || t1 > 0){
+			reportIntersectionNV(min(t0,t1), 0);
+			return;
+		}
+
+		//need to handle inside sphere too
+		
+
+	}
+
 }

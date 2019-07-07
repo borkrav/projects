@@ -104,6 +104,7 @@
     <None Include="..\libs\imgui\README.md">
       <Filter>imgui</Filter>
     </None>
+    <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">
