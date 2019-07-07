@@ -10,10 +10,12 @@ Overall goals:
 * slower effects such as spectral rendering and sub-surface scattering
 * BRDF material support
 
-I chose Vulkan because I'm already familiar with OpenGL, and I'd like to learn a modern API
-I chose RTX because I want to use the fastest hardware-accelerated technology currently available, rather than do an AVX or CUDA implementation
+I chose Vulkan because I'm already familiar with OpenGL, and I'd like to learn a modern API  
+I chose RTX because I want to use the fastest hardware-accelerated technology currently available, rather than do an AVX or CUDA implementation  
 
 In the future, I'd like to implement my own CUDA-based BVH, just to learn how the underlying RTX technology works
+
+
 
 
 Figured out how to do AABB intersection:
