@@ -104,6 +104,17 @@ public:
   VkCommandBuffer beginSingleTimeCommands();
   void            endSingleTimeCommands(VkCommandBuffer commandBuffer);
   VkImageView     createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
+  void     createImage(uint32_t              width,
+					   uint32_t              height,
+					   VkFormat              format,
+					   VkImageTiling         tiling,
+					   VkImageUsageFlags     usage,
+					   VkMemoryPropertyFlags properties,
+					   VkImage& image,
+					   VkDeviceMemory& imageMemory);
+
+
   void            transitionImageLayout(VkImage       image,
                                         VkFormat      format,
                                         VkImageLayout oldLayout,
@@ -116,14 +127,7 @@ private:
   VkFormat findDepthFormat();
   bool     hasStencilComponent(VkFormat format);
   void     createDepthResources();
-  void     createImage(uint32_t              width,
-                       uint32_t              height,
-                       VkFormat              format,
-                       VkImageTiling         tiling,
-                       VkImageUsageFlags     usage,
-                       VkMemoryPropertyFlags properties,
-                       VkImage&              image,
-                       VkDeviceMemory&       imageMemory);
+
 
   uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 

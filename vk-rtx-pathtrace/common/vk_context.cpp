@@ -16,6 +16,8 @@
 #include "imgui_impl_glfw_vulkan.h"
 #include "vk_context.h"
 
+#include "lodepng.h"
+
 namespace nv_helpers_vk {
 
 #ifdef _DEBUG
@@ -260,7 +262,7 @@ void VkContext::createSwapchain(VkSwapchainKHR old_swapchain, int w, int h)
   info.imageFormat              = m_surfaceFormat.format;
   info.imageColorSpace          = m_surfaceFormat.colorSpace;
   info.imageArrayLayers         = 1;
-  info.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+  info.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
   info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   info.preTransform     = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   info.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;

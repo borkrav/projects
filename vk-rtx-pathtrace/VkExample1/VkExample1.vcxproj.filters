@@ -45,6 +45,9 @@
     <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\DescriptorSetGenerator.cpp">
       <Filter>libs\vulkannv\nv_helpers_vk</Filter>
     </ClCompile>
+    <ClCompile Include="..\libs\lodepng\lodepng.cpp">
+      <Filter>libs\lodepng</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hello_vulkan.h" />
@@ -99,6 +102,9 @@
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\BottomLevelASGenerator.h">
       <Filter>libs\vulkannv\nv_helpers_vk</Filter>
     </ClInclude>
+    <ClInclude Include="..\libs\lodepng\lodepng.h">
+      <Filter>libs\lodepng</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\libs\imgui\README.md">
@@ -124,6 +130,9 @@
     </Filter>
     <Filter Include="libs\vulkannv\nv_helpers_vk">
       <UniqueIdentifier>{729e12ef-3382-4016-90ac-392ecd0be0c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs\lodepng">
+      <UniqueIdentifier>{fce64f3b-640e-458a-b264-b07119e9cd72}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

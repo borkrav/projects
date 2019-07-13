@@ -18,6 +18,7 @@
     <ClCompile Include="..\libs\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\libs\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\libs\imgui\imgui_impl_glfw_vulkan.cpp" />
+    <ClCompile Include="..\libs\lodepng\lodepng.cpp" />
     <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\BottomLevelASGenerator.cpp" />
     <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\DescriptorSetGenerator.cpp" />
     <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\RaytracingPipelineGenerator.cpp" />
@@ -40,6 +41,7 @@
     <ClInclude Include="..\libs\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\libs\imgui\stb_textedit.h" />
     <ClInclude Include="..\libs\imgui\stb_truetype.h" />
+    <ClInclude Include="..\libs\lodepng\lodepng.h" />
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\BottomLevelASGenerator.h" />
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\DescriptorSetGenerator.h" />
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\RaytracingPipelineGenerator.h" />
@@ -154,11 +156,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\Boris\Documents\GitHub\projects\vk-rtx-pathtrace\libs\vulkannv;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\Boris\Documents\GitHub\projects\vk-rtx-pathtrace\libs\lodepng;C:\Users\Boris\Documents\GitHub\projects\vk-rtx-pathtrace\libs\vulkannv;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\Boris\Documents\GitHub\projects\vk-rtx-pathtrace\libs\vulkannv;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\Boris\Documents\GitHub\projects\vk-rtx-pathtrace\libs\lodepng;C:\Users\Boris\Documents\GitHub\projects\vk-rtx-pathtrace\libs\vulkannv;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
