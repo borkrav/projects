@@ -1070,13 +1070,15 @@ void HelloVulkan::updateRaytracingRenderTarget(VkImageView target)
 void HelloVulkan::createRaytracingPipeline()
 {
 
+	std::string shaderDir = "../shaders/";
+
 	nv_helpers_vk::RayTracingPipelineGenerator pipelineGen;
 	// We use only one ray generation, that will implement the camera model
-	VkShaderModule rayGenModule = VkCtx.createShaderModule(readFile("shaders/raygen.rgen.spv"));
+	VkShaderModule rayGenModule = VkCtx.createShaderModule(readFile(shaderDir + "raygen.rgen.spv"));
 	m_rayGenIndex = pipelineGen.AddRayGenShaderStage(rayGenModule);
 	// The first miss shader is used to look-up the environment in case the rays
 	// from the camera miss the geometry
-	VkShaderModule missModule = VkCtx.createShaderModule(readFile("shaders/miss.rmiss.spv"));
+	VkShaderModule missModule = VkCtx.createShaderModule(readFile(shaderDir + "miss.rmiss.spv"));
 	m_missIndex = pipelineGen.AddMissShaderStage(missModule);
 
 	// The first hit group defines the shaders invoked when a ray shot from the
@@ -1087,17 +1089,17 @@ void HelloVulkan::createRaytracingPipeline()
 	m_hitGroupIndex = pipelineGen.StartHitGroup();
 
 	VkShaderModule closestHitModule =
-		VkCtx.createShaderModule(readFile("shaders/closesthit.rchit.spv"));
+		VkCtx.createShaderModule(readFile(shaderDir + "closesthit.rchit.spv"));
 	pipelineGen.AddHitShaderStage(closestHitModule, VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV);
 
 	pipelineGen.EndHitGroup();
 
 	m_hitGroupIndexSphere = pipelineGen.StartHitGroup();
 
-	VkShaderModule closestHitSphereModule = VkCtx.createShaderModule(readFile("shaders/closesthitSphere.rchit.spv"));
+	VkShaderModule closestHitSphereModule = VkCtx.createShaderModule(readFile(shaderDir + "closesthitSphere.rchit.spv"));
 	pipelineGen.AddHitShaderStage(closestHitSphereModule, VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV);
 
-	VkShaderModule intersectModule = VkCtx.createShaderModule(readFile("shaders/intersect.rint.spv"));
+	VkShaderModule intersectModule = VkCtx.createShaderModule(readFile(shaderDir + "intersect.rint.spv"));
 	pipelineGen.AddHitShaderStage(intersectModule, VK_SHADER_STAGE_INTERSECTION_BIT_NV);
 
 	pipelineGen.EndHitGroup();
