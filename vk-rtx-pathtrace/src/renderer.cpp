@@ -2,7 +2,7 @@
  * Copyright 1998-2018 NVIDIA Corp. All Rights Reserved.
  *****************************************************************************/
 
-#include "hello_vulkan.h"
+#include "renderer.h"
 
 #include <fstream>
 #include <iostream>
@@ -111,7 +111,7 @@ auto Vertex::getAttributeDescriptions()
 //--------------------------------------------------------------------------------------------------
 // Called at each frame to update the camera matrix
 //
-void HelloVulkan::updateUniformBuffer()
+void Renderer::updateUniformBuffer()
 {
 	UniformBufferObject ubo = {};
 	ubo.model = glm::mat4(1);
@@ -133,199 +133,11 @@ void HelloVulkan::updateUniformBuffer()
 	vkUnmapMemory(VkCtx.getDevice(), m_uniformBufferMemory);
 }
 
-//--------------------------------------------------------------------------------------------------
-//
-//
-void HelloVulkan::createDescriptorSetLayout()
-{
-	// Storing the matrices
-	VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-	uboLayoutBinding.binding = 0;
-	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.pImmutableSamplers = nullptr;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-	// Storing all materials
-	VkDescriptorSetLayoutBinding uboMatColorLayoutBinding = {};
-	uboMatColorLayoutBinding.binding = 1;
-	uboMatColorLayoutBinding.descriptorCount = 1;
-	uboMatColorLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	uboMatColorLayoutBinding.pImmutableSamplers = nullptr;
-	uboMatColorLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-	samplerLayoutBinding.binding = 2;
-	samplerLayoutBinding.descriptorCount = static_cast<uint32_t>(m_textureSampler.size());
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	std::array<VkDescriptorSetLayoutBinding, 3> bindings = {
-		uboLayoutBinding, uboMatColorLayoutBinding, samplerLayoutBinding };
-	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-	layoutInfo.pBindings = bindings.data();
-
-	if (vkCreateDescriptorSetLayout(VkCtx.getDevice(), &layoutInfo, nullptr, &m_descriptorSetLayout)
-		!= VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to create descriptor set layout!");
-	}
-}
-
-//--------------------------------------------------------------------------------------------------
-//
-//
-void HelloVulkan::createGraphicsPipeline(VkExtent2D framebufferSize)
-{
-	m_framebufferSize = framebufferSize;
-	//auto vertShaderCode = readFile("shaders/vert_shader.spv");
-	//auto fragShaderCode = readFile("shaders/frag_shader.spv");
-
-	//VkShaderModule vertShaderModule = VkCtx.createShaderModule(vertShaderCode);
-	//VkShaderModule fragShaderModule = VkCtx.createShaderModule(fragShaderCode);
-
-	//VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
-	//vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	//vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	//vertShaderStageInfo.module = vertShaderModule;
-	//vertShaderStageInfo.pName = "main";
-
-	//VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
-	//fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	//fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	//fragShaderStageInfo.module = fragShaderModule;
-	//fragShaderStageInfo.pName = "main";
-
-	//VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
-	//VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-	//vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-	//auto bindingDescription = Vertex::getBindingDescription();
-	//auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-	//vertexInputInfo.vertexBindingDescriptionCount = 1;
-	//vertexInputInfo.vertexAttributeDescriptionCount =
-	//	static_cast<uint32_t>(attributeDescriptions.size());
-	//vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	//vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-	//VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-	//inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	//inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	//inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-	//VkViewport viewport = {};
-	//viewport.x = 0.0f;
-	//viewport.y = 0.0f;
-	//viewport.width = static_cast<float>(m_framebufferSize.width);
-	//viewport.height = static_cast<float>(m_framebufferSize.height);
-	//viewport.minDepth = 0.0f;
-	//viewport.maxDepth = 1.0f;
-
-	//VkRect2D scissor = {};
-	//scissor.offset = { 0, 0 };
-	//scissor.extent = m_framebufferSize;
-
-	//VkPipelineViewportStateCreateInfo viewportState = {};
-	//viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	//viewportState.viewportCount = 1;
-	//viewportState.pViewports = &viewport;
-	//viewportState.scissorCount = 1;
-	//viewportState.pScissors = &scissor;
-
-	//VkPipelineRasterizationStateCreateInfo rasterizer = {};
-	//rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	//rasterizer.depthClampEnable = VK_FALSE;
-	//rasterizer.rasterizerDiscardEnable = VK_FALSE;
-	//rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-	//rasterizer.lineWidth = 1.0f;
-	//rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	//rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-	//rasterizer.depthBiasEnable = VK_FALSE;
-	//rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
-	//VkPipelineMultisampleStateCreateInfo multisampling = {};
-	//multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	//multisampling.sampleShadingEnable = VK_FALSE;
-	//multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	//VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-	//colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
-	//	| VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	//colorBlendAttachment.blendEnable = VK_FALSE;
-
-	//VkPipelineColorBlendStateCreateInfo colorBlending = {};
-	//colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	//colorBlending.logicOpEnable = VK_FALSE;
-	//colorBlending.logicOp = VK_LOGIC_OP_COPY;
-	//colorBlending.attachmentCount = 1;
-	//colorBlending.pAttachments = &colorBlendAttachment;
-	//colorBlending.blendConstants[0] = 0.0f;
-	//colorBlending.blendConstants[1] = 0.0f;
-	//colorBlending.blendConstants[2] = 0.0f;
-	//colorBlending.blendConstants[3] = 0.0f;
-
-	//VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-	//depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	//depthStencil.depthTestEnable = VK_TRUE;
-	//depthStencil.depthWriteEnable = VK_TRUE;
-	//depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	//depthStencil.depthBoundsTestEnable = VK_FALSE;
-	//depthStencil.minDepthBounds = 0.0f;  // Optional
-	//depthStencil.maxDepthBounds = 1.0f;  // Optional
-	//depthStencil.stencilTestEnable = VK_FALSE;
-	//depthStencil.front = {};  // Optional
-	//depthStencil.back = {};  // Optional
-
-	//VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-	//pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	//pipelineLayoutInfo.setLayoutCount = 1;
-	//pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
-
-	//if (vkCreatePipelineLayout(VkCtx.getDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout)
-	//	!= VK_SUCCESS)
-	//{
-	//	throw std::runtime_error("failed to create pipeline layout!");
-	//}
-
-	//VkGraphicsPipelineCreateInfo pipelineInfo = {};
-	//pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	//pipelineInfo.stageCount = 2;
-	//pipelineInfo.pStages = NULL;
-	//pipelineInfo.pVertexInputState = &vertexInputInfo;
-	//pipelineInfo.pInputAssemblyState = &inputAssembly;
-	//pipelineInfo.pViewportState = &viewportState;
-	//pipelineInfo.pRasterizationState = &rasterizer;
-	//pipelineInfo.pMultisampleState = &multisampling;
-	//pipelineInfo.pColorBlendState = &colorBlending;
-	//pipelineInfo.pDepthStencilState = &depthStencil;
-	//pipelineInfo.layout = m_pipelineLayout;
-	//pipelineInfo.renderPass = VkCtx.getRenderPass();
-	//pipelineInfo.subpass = 0;
-	//pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-	//if (m_graphicsPipeline != 0)
-	//	vkDestroyPipeline(VkCtx.getDevice(), m_graphicsPipeline, nullptr);
-
-	//if (vkCreateGraphicsPipelines(VkCtx.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
-	//	&m_graphicsPipeline)
-	//	!= VK_SUCCESS)
-	//{
-	//	throw std::runtime_error("failed to create graphics pipeline!");
-	//}
-
-	//vkDestroyShaderModule(VkCtx.getDevice(), fragShaderModule, nullptr);
-	//vkDestroyShaderModule(VkCtx.getDevice(), vertShaderModule, nullptr);
-}
 
 //--------------------------------------------------------------------------------------------------
 // Loading the OBJ file and setting up all buffers
 //
-void HelloVulkan::loadModel(const std::string& filename)
+void Renderer::loadModel(const std::string& filename)
 {
 	ObjLoader<Vertex> loader;
 	loader.loadModel(filename);
@@ -341,7 +153,7 @@ void HelloVulkan::loadModel(const std::string& filename)
 //--------------------------------------------------------------------------------------------------
 // Create procedural geometry
 //
-void HelloVulkan::createProcGeometry()
+void Renderer::createProcGeometry()
 {
 
 	m_AABB = std::vector<AABB>{ AABB{glm::vec3{-0.5, 1.5, -0.5}, glm::vec3{0.5, 2.5, 0.5}} };
@@ -352,7 +164,7 @@ void HelloVulkan::createProcGeometry()
 //--------------------------------------------------------------------------------------------------
 // Create a buffer holding all materials
 //
-void HelloVulkan::createMaterialBuffer(const std::vector<MatrialObj>& materials)
+void Renderer::createMaterialBuffer(const std::vector<MatrialObj>& materials)
 {
 	{
 		VkDeviceSize bufferSize = materials.size() * sizeof(MatrialObj);
@@ -369,7 +181,7 @@ void HelloVulkan::createMaterialBuffer(const std::vector<MatrialObj>& materials)
 //--------------------------------------------------------------------------------------------------
 // Create a buffer with all vertices
 //
-void HelloVulkan::createVertexBuffer(const std::vector<Vertex>& vertex)
+void Renderer::createVertexBuffer(const std::vector<Vertex>& vertex)
 {
 	VkDeviceSize bufferSize = sizeof(vertex[0]) * vertex.size();
 
@@ -396,7 +208,7 @@ void HelloVulkan::createVertexBuffer(const std::vector<Vertex>& vertex)
 }
 
 
-void HelloVulkan::createAABBBuffer(const std::vector<AABB>& vertex)
+void Renderer::createAABBBuffer(const std::vector<AABB>& vertex)
 {
 	VkDeviceSize bufferSize = sizeof(vertex[0]) * vertex.size();
 
@@ -426,7 +238,7 @@ void HelloVulkan::createAABBBuffer(const std::vector<AABB>& vertex)
 //--------------------------------------------------------------------------------------------------
 // Create a buffer of the triangle indices
 //
-void HelloVulkan::createIndexBuffer(const std::vector<uint32_t>& indices)
+void Renderer::createIndexBuffer(const std::vector<uint32_t>& indices)
 {
 	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -452,75 +264,11 @@ void HelloVulkan::createIndexBuffer(const std::vector<uint32_t>& indices)
 	vkFreeMemory(VkCtx.getDevice(), stagingBufferMemory, nullptr);
 }
 
-//--------------------------------------------------------------------------------------------------
-// Setting up the buffers in the descriptor set
-//
-void HelloVulkan::updateDescriptorSet()
-{
-	VkDescriptorSetLayout       layouts[] = { m_descriptorSetLayout };
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = VkCtx.getDescriptorPool();
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = layouts;
-
-	if (vkAllocateDescriptorSets(VkCtx.getDevice(), &allocInfo, &m_descriptorSet) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to allocate descriptor set!");
-	}
-
-	VkDescriptorBufferInfo bufferInfo = {};
-	bufferInfo.buffer = m_uniformBuffer;
-	bufferInfo.offset = 0;
-	bufferInfo.range = VK_WHOLE_SIZE;
-
-	VkDescriptorBufferInfo matColorBufferInfo = {};
-	matColorBufferInfo.buffer = m_matColorBuffer;
-	matColorBufferInfo.offset = 0;
-	matColorBufferInfo.range = VK_WHOLE_SIZE;
-
-	std::vector<VkDescriptorImageInfo> imageInfos;
-	for (size_t i = 0; i < m_textureSampler.size(); ++i)
-	{
-		VkDescriptorImageInfo imageInfo = {};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = m_textureImageView[i];
-		imageInfo.sampler = m_textureSampler[i];
-		imageInfos.push_back(imageInfo);
-	}
-
-	std::vector<VkWriteDescriptorSet> descriptorWrites = {};
-	VkWriteDescriptorSet              wds = {};
-	wds.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	wds.dstSet = m_descriptorSet;
-	wds.dstArrayElement = 0;
-	wds.descriptorCount = 1;
-	// Matrices
-	wds.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	wds.dstBinding = 0;
-	wds.pBufferInfo = &bufferInfo;
-	descriptorWrites.push_back(wds);
-	// Materials
-	wds.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	wds.dstBinding = 1;
-	wds.pBufferInfo = &matColorBufferInfo;
-	descriptorWrites.push_back(wds);
-	// Textures
-	wds.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	wds.dstBinding = 2;
-	wds.descriptorCount = static_cast<uint32_t>(imageInfos.size());
-	wds.pImageInfo = imageInfos.data();
-	wds.pBufferInfo = nullptr;
-	descriptorWrites.push_back(wds);
-
-	vkUpdateDescriptorSets(VkCtx.getDevice(), static_cast<uint32_t>(descriptorWrites.size()),
-		descriptorWrites.data(), 0, nullptr);
-}
 
 //--------------------------------------------------------------------------------------------------
 // Creating the uniform buffer holding the matrices
 //
-void HelloVulkan::createUniformBuffer()
+void Renderer::createUniformBuffer()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	VkCtx.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -531,7 +279,7 @@ void HelloVulkan::createUniformBuffer()
 //--------------------------------------------------------------------------------------------------
 // Creating all textures and samplers
 //
-void HelloVulkan::createTextureImages(const std::vector<std::string>& textures)
+void Renderer::createTextureImages(const std::vector<std::string>& textures)
 {
 	// If no textures are present, create a dummy one to accommodate the pipeline layout
 	if (textures.empty())
@@ -588,7 +336,7 @@ void HelloVulkan::createTextureImages(const std::vector<std::string>& textures)
 //--------------------------------------------------------------------------------------------------
 // Return standard sampler
 //
-VkSampler HelloVulkan::createTextureSampler()
+VkSampler Renderer::createTextureSampler()
 {
 	VkSamplerCreateInfo samplerInfo = {};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -613,7 +361,7 @@ VkSampler HelloVulkan::createTextureSampler()
 }
 
 
-void HelloVulkan::destroyResources()
+void Renderer::destroyResources()
 {
 
 	vkDestroyDescriptorSetLayout(VkCtx.getDevice(), m_descriptorSetLayout, nullptr);
@@ -662,7 +410,7 @@ void HelloVulkan::destroyResources()
 //--------------------------------------------------------------------------------------------------
 // Initialize Vulkan ray tracing
 // #VKRay
-void HelloVulkan::initRayTracing()
+void Renderer::initRayTracing()
 {
 	// Query the values of shaderHeaderSize and maxRecursionDepth in current implementation
 	m_raytracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
@@ -679,7 +427,7 @@ void HelloVulkan::initRayTracing()
 //--------------------------------------------------------------------------------------------------
 // Create the instances from the scene data
 // #VKRay
-void HelloVulkan::createGeometryInstances()
+void Renderer::createGeometryInstances()
 {
 	// The importer always imports the geometry as a single instance, without a
 	// transform. Using a more complex importer, this should be adapted.
@@ -705,7 +453,7 @@ void HelloVulkan::createGeometryInstances()
 // buffers in GPU memory along with their vertex count. The build is then done
 // in 3 steps: gathering the geometry, computing the sizes of the required
 // buffers, and building the actual AS #VKRay
-HelloVulkan::AccelerationStructure HelloVulkan::createBottomLevelAS(
+Renderer::AccelerationStructure Renderer::createBottomLevelAS(
 	VkCommandBuffer               commandBuffer,
 	std::vector<GeometryInstance> vVertexBuffers)
 {
@@ -778,7 +526,7 @@ HelloVulkan::AccelerationStructure HelloVulkan::createBottomLevelAS(
 // Similarly to the bottom-level AS generation, it is done in 3 steps: gathering
 // the instances, computing the memory requirements for the AS, and building the
 // AS itself #VKRay
-void HelloVulkan::createTopLevelAS(
+void Renderer::createTopLevelAS(
 	VkCommandBuffer commandBuffer,
 	const std::vector<std::pair<VkAccelerationStructureNV, glm::mat4x4>>&
 	instances,  // pair of bottom level AS and matrix of the instance
@@ -850,7 +598,7 @@ void HelloVulkan::createTopLevelAS(
 //--------------------------------------------------------------------------------------------------
 // Create the bottom-level and top-level acceleration structures
 // #VKRay
-void HelloVulkan::createAccelerationStructures()
+void Renderer::createAccelerationStructures()
 {
 
 	// Create a one-time command buffer in which the AS build commands will be
@@ -920,7 +668,7 @@ void HelloVulkan::createAccelerationStructures()
 
 //--------------------------------------------------------------------------------------------------
 // Destroys an acceleration structure and all the resources associated to it
-void HelloVulkan::destroyAccelerationStructure(const AccelerationStructure& as)
+void Renderer::destroyAccelerationStructure(const AccelerationStructure& as)
 {
 	vkDestroyBuffer(VkCtx.getDevice(), as.scratchBuffer, nullptr);
 	vkFreeMemory(VkCtx.getDevice(), as.scratchMem, nullptr);
@@ -937,7 +685,7 @@ void HelloVulkan::destroyAccelerationStructure(const AccelerationStructure& as)
 // shaders will access the same descriptor set, and therefore the set needs to
 // contain all the resources used by the shaders. For example, it will contain
 // all the textures used in the scene.
-void HelloVulkan::createRaytracingDescriptorSet()
+void Renderer::createRaytracingDescriptorSet()
 {
 	// We will bind the vertex and index buffers, so we first add a barrier on
 	// those buffers to make sure their data is actually present on the GPU
@@ -1050,7 +798,7 @@ void HelloVulkan::createRaytracingDescriptorSet()
 	m_rtDSG.UpdateSetContents(VkCtx.getDevice(), m_rtDescriptorSet);
 }
 
-void HelloVulkan::updateRaytracingRenderTarget(VkImageView target)
+void Renderer::updateRaytracingRenderTarget(VkImageView target)
 {
 	// Output buffer
 	VkDescriptorImageInfo descriptorOutputImageInfo;
@@ -1067,7 +815,7 @@ void HelloVulkan::updateRaytracingRenderTarget(VkImageView target)
 // Create the raytracing pipeline, containing the handles and data for each
 // raytracing shader For each shader or hit group we retain its index, so that
 // they can be bound to the geometry in the shader binding table.
-void HelloVulkan::createRaytracingPipeline()
+void Renderer::createRaytracingPipeline()
 {
 
 	std::string shaderDir = "../shaders/";
@@ -1124,7 +872,7 @@ void HelloVulkan::createRaytracingPipeline()
 //--------------------------------------------------------------------------------------------------
 // Create the shader binding table, associating the geometry to the indices of the shaders in the
 // ray tracing pipeline
-void HelloVulkan::createShaderBindingTable()
+void Renderer::createShaderBindingTable()
 {
 	// Add the entry point, the ray generation program
 	m_sbtGen.AddRayGenerationProgram(m_rayGenIndex, {});

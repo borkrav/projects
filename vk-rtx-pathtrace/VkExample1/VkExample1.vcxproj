@@ -26,7 +26,7 @@
     <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\TopLevelASGenerator.cpp" />
     <ClCompile Include="..\libs\vulkannv\nv_helpers_vk\VKHelpers.cpp" />
     <ClCompile Include="..\libs\vulkannv\vulkan_raytracing.cpp" />
-    <ClCompile Include="..\src\hello_vulkan.cpp" />
+    <ClCompile Include="..\src\renderer.cpp" />
     <ClCompile Include="..\src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -48,7 +48,7 @@
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\ShaderBindingTableGenerator.h" />
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\TopLevelASGenerator.h" />
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\VKHelpers.h" />
-    <ClInclude Include="..\src\hello_vulkan.h" />
+    <ClInclude Include="..\src\renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\libs\imgui\README.md" />

@@ -38,11 +38,9 @@ struct AABB
 //--------------------------------------------------------------------------------------------------
 //
 //
-class HelloVulkan
+class Renderer
 {
 public:
-	void createDescriptorSetLayout();
-	void createGraphicsPipeline(VkExtent2D framebufferSize);
 	void loadModel(const std::string& filename);
 	void createMaterialBuffer(const std::vector<MatrialObj>& materials);
 	void createVertexBuffer(const std::vector<Vertex>& vertex);
@@ -51,7 +49,6 @@ public:
 
 
 	void      createIndexBuffer(const std::vector<uint32_t>& indices);
-	void      updateDescriptorSet();
 	void      createUniformBuffer();
 	void      createTextureImages(const std::vector<std::string>& textures);
 	VkSampler createTextureSampler();

@@ -17,7 +17,7 @@
 
 #include "lodepng.h"
 
-#include "hello_vulkan.h"
+#include "renderer.h"
 #include "manipulator.h"
 #include "vk_context.h"
 
@@ -217,16 +217,12 @@ int main(int argc, char** argv)
 		ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
 	}
 
-	HelloVulkan helloVulkan;
+	Renderer helloVulkan;
 	helloVulkan.loadModel("../media/scenes/cube_multi.obj");
-
 	helloVulkan.createProcGeometry();
-
-	//helloVulkan.createDescriptorSetLayout();
-	helloVulkan.createGraphicsPipeline(
-		{ static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) });
+	helloVulkan.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
 	helloVulkan.createUniformBuffer();
-	//helloVulkan.updateDescriptorSet();
+
 
 	// #VKRay
 	helloVulkan.initRayTracing();
@@ -235,8 +231,6 @@ int main(int argc, char** argv)
 	helloVulkan.createRaytracingDescriptorSet();
 	helloVulkan.createRaytracingPipeline();
 	helloVulkan.createShaderBindingTable();
-
-	//bool use_raster_render = false;
 
 
 	ImVec4 clear_color = ImVec4(1, 1, 1, 1.00f);
@@ -259,8 +253,9 @@ int main(int argc, char** argv)
 		if (g_ResizeWanted)
 		{
 			VkCtx.resizeVulkan(g_winWidth, g_winHeight);
-			helloVulkan.createGraphicsPipeline(
-				{ static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) });
+			helloVulkan.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
+			backBufferFrames = IMGUI_VK_QUEUED_FRAMES;
+
 		}
 		g_ResizeWanted = false;
 

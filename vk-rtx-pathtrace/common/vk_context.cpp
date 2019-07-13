@@ -90,6 +90,10 @@ void VkContext::resizeVulkan(int w, int h)
     vkDestroyRenderPass(m_device, m_renderPass, m_allocator);
   }
 
+  vkDestroyImageView(m_device, m_depthImageView, nullptr);
+  vkDestroyImage(m_device, m_depthImage, nullptr);
+  vkFreeMemory(m_device, m_depthImageMemory, nullptr);
+
   // Create Swapchain:
   createSwapchain(old_swapchain, w, h);
 
