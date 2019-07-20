@@ -117,18 +117,6 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="..\README.md" />
-    <None Include="..\shaders\closesthitSphere.rchit">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\intersect.rint">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\miss.rmiss">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\closesthit.rchit">
-      <Filter>shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">
@@ -163,6 +151,18 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\shaders\raygen.rgen">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\shaders\closesthit.rchit">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\shaders\closesthitSphere.rchit">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\shaders\intersect.rint">
+      <Filter>shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\shaders\miss.rmiss">
       <Filter>shaders</Filter>
     </CustomBuild>
   </ItemGroup>

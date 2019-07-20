@@ -82,6 +82,9 @@ public:
 	VkBuffer       m_matColorBuffer;
 	VkDeviceMemory m_matColorBufferMemory;
 
+	VkBuffer       m_sphereBuffer;
+	VkDeviceMemory m_sphereBufferMemory;
+
 	VkExtent2D m_framebufferSize;
 
 	//Procedural geometry implementation (AABB mode)
@@ -111,6 +114,12 @@ public:
 		glm::mat4x4  transform;
 	};
 
+	struct Sphere {
+		glm::vec3 centre;
+		float radius;
+	};
+
+	void createSphereBuffer(const std::vector<Sphere>& spheres);
 
 	void                          createGeometryInstances();
 	std::vector<GeometryInstance> m_geometryInstances;
@@ -129,9 +138,11 @@ public:
 
 	AccelerationStructure createBottomLevelAS(VkCommandBuffer               commandBuffer,
 		std::vector<GeometryInstance> vVertexBuffers);
+
 	void                  createTopLevelAS(
 		VkCommandBuffer                                                       commandBuffer,
 		const std::vector<std::pair<VkAccelerationStructureNV, glm::mat4x4>>& instances,
+		const std::vector<int>& hitGroups,
 		/* pair of bottom level AS and matrix of the instance */
 		VkBool32 updateOnly);
 

@@ -156,9 +156,34 @@ void Renderer::loadModel(const std::string& filename)
 void Renderer::createProcGeometry()
 {
 
-	m_AABB = std::vector<AABB>{ AABB{glm::vec3{-0.5, 1.5, -0.5}, glm::vec3{0.5, 2.5, 0.5}} };
+	m_AABB = std::vector<AABB>{ AABB{glm::vec3{-0.5, -0.5, -0.5}, glm::vec3{0.5, 0.5, 0.5}} };
 	createAABBBuffer(m_AABB);
+	
+	std::vector<Sphere> spheres = std::vector<Sphere>{ Sphere{glm::vec3{0,1,0}, 0.5},
+													   Sphere{glm::vec3{0,-99.5,0}, 100}};
+	createSphereBuffer(spheres);
+
 }
+
+
+//--------------------------------------------------------------------------------------------------
+// Create a buffer holding sphere centres and radiuses
+//
+void Renderer::createSphereBuffer(const std::vector<Sphere>& spheres)
+{
+	{
+		VkDeviceSize bufferSize = spheres.size() * sizeof(Sphere);
+		VkCtx.createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			m_sphereBuffer, m_sphereBufferMemory);
+		void* data;
+		vkMapMemory(VkCtx.getDevice(), m_sphereBufferMemory, 0, bufferSize, 0, &data);
+		memcpy(data, spheres.data(), bufferSize);
+		vkUnmapMemory(VkCtx.getDevice(), m_sphereBufferMemory);
+	}
+}
+
+
 
 
 //--------------------------------------------------------------------------------------------------
@@ -383,6 +408,9 @@ void Renderer::destroyResources()
 	vkDestroyBuffer(VkCtx.getDevice(), m_matColorBuffer, nullptr);
 	vkFreeMemory(VkCtx.getDevice(), m_matColorBufferMemory, nullptr);
 
+	vkDestroyBuffer(VkCtx.getDevice(), m_sphereBuffer, nullptr);
+	vkFreeMemory(VkCtx.getDevice(), m_sphereBufferMemory, nullptr);
+
 	for (size_t i = 0; i < m_textureImage.size(); i++)
 	{
 		vkDestroySampler(VkCtx.getDevice(), m_textureSampler[i], nullptr);
@@ -439,6 +467,7 @@ void Renderer::createGeometryInstances()
 									0, 1, 0, 0, 
 									0, 0, 1, 0, 
 									0, 0, 0, 1);
+
 
 	m_geometryInstances.push_back(
 		{ m_vertexBuffer, m_nbVertices, 0, m_indexBuffer, m_nbIndices, 0, false, mat1 });
@@ -528,8 +557,9 @@ Renderer::AccelerationStructure Renderer::createBottomLevelAS(
 // AS itself #VKRay
 void Renderer::createTopLevelAS(
 	VkCommandBuffer commandBuffer,
-	const std::vector<std::pair<VkAccelerationStructureNV, glm::mat4x4>>&
-	instances,  // pair of bottom level AS and matrix of the instance
+	const std::vector<std::pair<VkAccelerationStructureNV, glm::mat4x4>>& instances,
+	// pair of bottom level AS and matrix of the instance
+	const std::vector<int>& hitGroups,
 	VkBool32 updateOnly)
 {
 	if (!updateOnly)
@@ -543,7 +573,7 @@ void Renderer::createTopLevelAS(
 			// hit group to be executed when hitting this instance. We set this index
 			// to i due to the use of 1 type of rays in the scene: the camera rays
 			m_topLevelASGenerator.AddInstance(instances[i].first, instances[i].second,
-				static_cast<uint32_t>(i), static_cast<uint32_t>(i));
+				static_cast<uint32_t>(i), static_cast<uint32_t>(hitGroups[i]));
 		}
 
 		// Once all instances have been added, we can create the handle for the TLAS
@@ -643,8 +673,23 @@ void Renderer::createAccelerationStructures()
 		instances.push_back({ m_bottomLevelAS[i].structure, m_geometryInstances[i].transform });
 	}
 
+	//these are the various geometric instances
+	instances[0].second = glm::translate(instances[0].second, glm::vec3(0, 30, 0));
+	instances[0].second = glm::scale(instances[0].second, glm::vec3(0.2, 0.2, 0.2));
+	instances[1].second = glm::translate(instances[1].second, glm::vec3(0, 1, 0));
+
+	//put 2 more spheres
+	instances.push_back({ m_bottomLevelAS[1].structure, m_geometryInstances[1].transform });
+	//instances.push_back({ m_bottomLevelAS[1].structure, m_geometryInstances[1].transform });
+
+	instances[2].second = glm::translate(instances[2].second, glm::vec3(0, -99.5, 0));
+	instances[2].second = glm::scale(instances[2].second, glm::vec3(200, 200, 200));
+	//instances[3].second = glm::translate(instances[3].second, glm::vec3(1.5, 1, 0));
+
+	std::vector<int> hitGroups{ 0,1,1 };
+
 	// Create the top-level AS from the previously computed BLAS
-	createTopLevelAS(commandBuffer, instances, VK_FALSE);
+	createTopLevelAS(commandBuffer, instances, hitGroups, VK_FALSE);
 
 	// End the command buffer and submit it
 	vkEndCommandBuffer(commandBuffer);
@@ -728,6 +773,8 @@ void Renderer::createRaytracingDescriptorSet()
 	// Textures
 	m_rtDSG.AddBinding(6, static_cast<uint32_t>(m_textureSampler.size()),
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV);
+	// Spheres
+	m_rtDSG.AddBinding(7, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_INTERSECTION_BIT_NV | VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV);
 
 	// Create the descriptor pool and layout
 	m_rtDescriptorPool = m_rtDSG.GeneratePool(VkCtx.getDevice());
@@ -778,6 +825,13 @@ void Renderer::createRaytracingDescriptorSet()
 	materialInfo.offset = 0;
 	materialInfo.range = VK_WHOLE_SIZE;
 	m_rtDSG.Bind(m_rtDescriptorSet, 5, { materialInfo });
+
+	// Spheres buffer
+	VkDescriptorBufferInfo sphereInfo = {};
+	sphereInfo.buffer = m_sphereBuffer;
+	sphereInfo.offset = 0;
+	sphereInfo.range = VK_WHOLE_SIZE;
+	m_rtDSG.Bind(m_rtDescriptorSet, 7, { sphereInfo });
 
 	// Textures
 	std::vector<VkDescriptorImageInfo> imageInfos;
