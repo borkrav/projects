@@ -14,7 +14,17 @@ layout(binding=2, set = 0) uniform CameraProperties
     mat4 projInverse;
 } cam;
 
-layout(location = 0) rayPayloadNV vec3 hitValue;
+
+struct payload {
+	vec3 hitValue;
+	vec3 origin;
+	vec3 direction;
+	bool hit;
+	uint seed;
+}; 
+
+
+layout(location = 0) rayPayloadNV payload pl;
 
 
 //RNG code taken from here
@@ -58,11 +68,12 @@ void main()
 
 	vec3 finalColor = vec3(0,0,0);
 
-	rng_state = wang_hash(gl_LaunchIDNV.x + gl_LaunchIDNV.y);
+	rng_state = wang_hash(gl_LaunchIDNV.x * gl_LaunchIDNV.y);
 
 	//simple anti-aliasing, 4 rays per pixel
-	for (int i = 0; i < 4; i++){
+	for (int i = 0; i < 100; i++){
 
+		vec3 iterationColor = vec3(0);
 		
 		float offset1 = float(rand_xorshift()) * (1.0 / 4294967296.0);
 		float offset2 = float(rand_xorshift()) * (1.0 / 4294967296.0);
@@ -77,9 +88,26 @@ void main()
 		traceNV(topLevelAS, rayFlags, cullMask, 0 /*sbtRecordOffset*/, 0 /*sbtRecordStride*/,
 		0 /*missIndex*/, origin.xyz, tmin, direction.xyz, tmax, 0 /*payload*/);
 
-		finalColor += hitValue/4;
+		iterationColor += pl.hitValue;
+
+		for (int i = 0; i < 3; i++){
+			if (pl.hit == true){
+
+				traceNV(topLevelAS, rayFlags, cullMask, 0 /*sbtRecordOffset*/, 0 /*sbtRecordStride*/,
+				0 /*missIndex*/, pl.origin.xyz, tmin, pl.direction.xyz, tmax, 0 /*payload*/);
+
+				iterationColor *= pl.hitValue;
+
+			}
+		}
+
+
+		finalColor += iterationColor;
+		
 
 	}
+
+	finalColor = finalColor/100;
 
 	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(finalColor, 0.0));
 }

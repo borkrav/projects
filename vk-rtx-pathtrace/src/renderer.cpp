@@ -159,7 +159,7 @@ void Renderer::createProcGeometry()
 	m_AABB = std::vector<AABB>{ AABB{glm::vec3{-0.5, -0.5, -0.5}, glm::vec3{0.5, 0.5, 0.5}} };
 	createAABBBuffer(m_AABB);
 	
-	std::vector<Sphere> spheres = std::vector<Sphere>{ Sphere{glm::vec3{0,1,0}, 0.5},
+	std::vector<Sphere> spheres = std::vector<Sphere>{ Sphere{glm::vec3{0,1.001,0}, 0.5},
 													   Sphere{glm::vec3{0,-99.5,0}, 100}};
 	createSphereBuffer(spheres);
 
@@ -676,7 +676,7 @@ void Renderer::createAccelerationStructures()
 	//these are the various geometric instances
 	instances[0].second = glm::translate(instances[0].second, glm::vec3(0, 30, 0));
 	instances[0].second = glm::scale(instances[0].second, glm::vec3(0.2, 0.2, 0.2));
-	instances[1].second = glm::translate(instances[1].second, glm::vec3(0, 1, 0));
+	instances[1].second = glm::translate(instances[1].second, glm::vec3(0, 1.001, 0));
 
 	//put 2 more spheres
 	instances.push_back({ m_bottomLevelAS[1].structure, m_geometryInstances[1].transform });

@@ -65,6 +65,7 @@ void main()
 
 		//one intersection
 		if (t0 == t1){
+
 			reportIntersectionNV(t0, 0);
 			return;
 		}

@@ -150,6 +150,7 @@ int main(int argc, char** argv)
 	// Setup camera
 	CameraManip.setWindowSize(g_winWidth, g_winHeight);
 	CameraManip.setLookat(glm::vec3(0, 1, 3.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+	//CameraManip.setLookat(glm::vec3(0, 25, -100), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
 	// Setup Vulkan
 	if (!glfwVulkanSupported())
