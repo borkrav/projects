@@ -47,6 +47,11 @@ public:
 
 	void createAABBBuffer(const std::vector<AABB>& vertex);
 
+	void createAccumulationBuffer(int width, int height);
+	void createInvalidationBuffer(int width, int height);
+
+
+	void clearBuffers(int width, int height);
 
 	void      createIndexBuffer(const std::vector<uint32_t>& indices);
 	void      createUniformBuffer();
@@ -84,6 +89,12 @@ public:
 
 	VkBuffer       m_sphereBuffer;
 	VkDeviceMemory m_sphereBufferMemory;
+
+	VkBuffer       m_accumulationBuffer;
+	VkDeviceMemory m_accumulationBufferMemory;
+
+	VkBuffer       m_invalidationBuffer;
+	VkDeviceMemory m_invalidationBufferMemory;
 
 	VkExtent2D m_framebufferSize;
 

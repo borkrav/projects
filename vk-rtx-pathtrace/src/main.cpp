@@ -23,6 +23,7 @@
 
 static bool g_ResizeWanted = false;
 static int  g_winWidth = 1650, g_winHeight = 1200;
+bool test = false;
 
 //////////////////////////////////////////////////////////////////////////
 #define UNUSED(x) (void)(x)
@@ -109,6 +110,9 @@ static void on_mouseButtonCallback(GLFWwindow* window, int button, int action, i
 	double xpos, ypos;
 	glfwGetCursorPos(window, &xpos, &ypos);
 	CameraManip.setMousePosition(static_cast<int>(xpos), static_cast<int>(ypos));
+
+	test = true;
+
 }
 
 static void on_scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
@@ -224,6 +228,8 @@ int main(int argc, char** argv)
 	helloVulkan.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
 	helloVulkan.createUniformBuffer();
 
+	helloVulkan.createAccumulationBuffer(g_winWidth, g_winHeight);
+	helloVulkan.createInvalidationBuffer(g_winWidth, g_winHeight);
 
 	// #VKRay
 	helloVulkan.initRayTracing();
@@ -473,6 +479,12 @@ int main(int argc, char** argv)
 			}
 			
 			ImGui::End();
+		}
+
+
+		if (test) {
+			//helloVulkan.clearBuffers(g_winWidth, g_winHeight);
+			test = false;
 		}
 
 

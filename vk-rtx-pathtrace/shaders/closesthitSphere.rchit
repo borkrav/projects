@@ -74,16 +74,18 @@ void main()
 	const vec3 intersection = origin + gl_HitTNV * direction;
 	const vec3 normal = (intersection - center)/radius;
 
+	rng_state = pl.seed;
+
+
 
 	if (gl_HitTNV > 0.000000000001){
 
 		vec3 dir;
 
-		rng_state = wang_hash(pl.seed);
-
-
-
-
+		//this is for safety - to avoid infinite loop
+		//it happens because of bad seed probably
+		int count = 0;
+		
 		do{ 
 		
 
@@ -96,7 +98,9 @@ void main()
 		
 			dir = 2.0*rng - vec3(1.0,1.0,1.0);
 
-		} while (dot(dir,dir) >= 1);    
+			count += 1;
+
+		} while (dot(dir,dir) >= 1 && count < 100);    
 	
 		vec3 target = intersection + normal + dir;
 

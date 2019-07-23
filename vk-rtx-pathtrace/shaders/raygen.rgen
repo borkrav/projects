@@ -26,6 +26,8 @@ struct payload {
 
 layout(location = 0) rayPayloadNV payload pl;
 
+layout(binding = 8) buffer accumulationData{ vec4 [] acc; }a;
+layout(binding = 9) buffer invalidationData{ int[] flag; }i;
 
 //RNG code taken from here
 //http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
@@ -68,10 +70,17 @@ void main()
 
 	vec3 finalColor = vec3(0,0,0);
 
-	rng_state = wang_hash(gl_LaunchIDNV.x * gl_LaunchIDNV.y);
+	uint index = gl_LaunchIDNV.y*gl_LaunchSizeNV.x + gl_LaunchIDNV.x;
 
+	rng_state = wang_hash(index * uint(i.flag[index] + 1));
+	pl.seed = rng_state;
+
+
+
+
+	
 	//simple anti-aliasing, 4 rays per pixel
-	for (int i = 0; i < 100; i++){
+	for (int i = 0; i < 4; i++){
 
 		vec3 iterationColor = vec3(0);
 		
@@ -84,6 +93,7 @@ void main()
 		vec2 d = inUV * 2.0 - 1.0;
 		vec4 target = cam.projInverse * vec4(d.x, d.y, 1, 1) ;
 		vec4 direction = cam.viewInverse*vec4(normalize(target.xyz), 0) ;
+
 
 		traceNV(topLevelAS, rayFlags, cullMask, 0 /*sbtRecordOffset*/, 0 /*sbtRecordStride*/,
 		0 /*missIndex*/, origin.xyz, tmin, direction.xyz, tmax, 0 /*payload*/);
@@ -107,7 +117,24 @@ void main()
 
 	}
 
-	finalColor = finalColor/100;
+	finalColor = finalColor/4;
 
-	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(finalColor, 0.0));
+	if (i.flag[index] == 0){
+		a.acc[index] = vec4(0);
+	}
+
+	bool accumulate = true;
+
+	if (accumulate){
+		a.acc[index].xyz += finalColor;
+	}
+
+	i.flag[index] += 1;
+
+	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulate ? a.acc[index].xyz / i.flag[index] : finalColor , 0.0));
+
+	
+
+
+	
 }
