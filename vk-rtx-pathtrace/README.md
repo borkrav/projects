@@ -13,15 +13,9 @@ Overall goals:
 I chose Vulkan because I'm already familiar with OpenGL, and I'd like to learn a modern API  
 I chose RTX because I want to use the fastest hardware-accelerated technology currently available, rather than do an AVX or CUDA implementation  
 
-In the future, I'd like to implement my own CUDA-based BVH, just to learn how the underlying RTX technology works
 
-
-
-
-Figured out how to do AABB intersection:
-* How to set up TLAS/BLAS and SBT for multiple objects
-* How to trace a sphere and visualize normals
-
-Next:
-* PNG output for the framebuffer, to keep track of development, save cool renders
-* Generalize for multiple different objects, with different transformations
+Features so far:
+* Sphere intersection (AABB BLAS/TLAS support)
+* Screenshot functionality (framebuffer output)
+* Accumulation buffer
+* Diffuse materials
