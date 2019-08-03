@@ -23,7 +23,7 @@
 
 static bool g_ResizeWanted = false;
 static int  g_winWidth = 1650, g_winHeight = 1200;
-bool test = false;
+unsigned int iteration = 0;
 
 //////////////////////////////////////////////////////////////////////////
 #define UNUSED(x) (void)(x)
@@ -97,6 +97,8 @@ static void on_mouseMoveCallback(GLFWwindow* window, double mouseX, double mouse
 	inputs.alt = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
 
 	CameraManip.mouseMove(static_cast<int>(mouseX), static_cast<int>(mouseY), inputs);
+
+	iteration = 0;
 }
 
 static void on_mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -111,8 +113,7 @@ static void on_mouseButtonCallback(GLFWwindow* window, int button, int action, i
 	glfwGetCursorPos(window, &xpos, &ypos);
 	CameraManip.setMousePosition(static_cast<int>(xpos), static_cast<int>(ypos));
 
-	test = true;
-
+	iteration = 0;
 }
 
 static void on_scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
@@ -123,6 +124,8 @@ static void on_scrollCallback(GLFWwindow* window, double xoffset, double yoffset
 		return;
 	}
 	CameraManip.wheel(static_cast<int>(yoffset));
+
+	iteration = 0;
 }
 
 int main(int argc, char** argv)
@@ -229,7 +232,6 @@ int main(int argc, char** argv)
 	helloVulkan.createUniformBuffer();
 
 	helloVulkan.createAccumulationBuffer(g_winWidth, g_winHeight);
-	helloVulkan.createInvalidationBuffer(g_winWidth, g_winHeight);
 
 	// #VKRay
 	helloVulkan.initRayTracing();
@@ -263,10 +265,18 @@ int main(int argc, char** argv)
 			helloVulkan.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
 			backBufferFrames = IMGUI_VK_QUEUED_FRAMES;
 
+			vkDestroyBuffer(VkCtx.getDevice(), helloVulkan.m_accumulationBuffer, nullptr);
+			vkFreeMemory(VkCtx.getDevice(), helloVulkan.m_accumulationBufferMemory, nullptr);
+			helloVulkan.createAccumulationBuffer(g_winWidth, g_winHeight);
+
+			helloVulkan.updateRaytracingAccumulationBuffer();
+
+			iteration = 0;
+
 		}
 		g_ResizeWanted = false;
 
-		helloVulkan.updateUniformBuffer();
+		helloVulkan.updateUniformBuffer(iteration += 1);
 
 		// 1. Show a simple window.
 		// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets
@@ -479,12 +489,6 @@ int main(int argc, char** argv)
 			}
 			
 			ImGui::End();
-		}
-
-
-		if (test) {
-			//helloVulkan.clearBuffers(g_winWidth, g_winHeight);
-			test = false;
 		}
 
 

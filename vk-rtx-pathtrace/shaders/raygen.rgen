@@ -1,6 +1,8 @@
 #version 460
 #extension GL_NV_ray_tracing : require
 
+#include "rng.glsl"
+
 layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D image;
 
@@ -12,6 +14,7 @@ layout(binding=2, set = 0) uniform CameraProperties
     mat4 modelIT;
     mat4 viewInverse;
     mat4 projInverse;
+	uint iteration;
 } cam;
 
 
@@ -27,32 +30,12 @@ struct payload {
 layout(location = 0) rayPayloadNV payload pl;
 
 layout(binding = 8) buffer accumulationData{ vec4 [] acc; }a;
-layout(binding = 9) buffer invalidationData{ int[] flag; }i;
 
 //RNG code taken from here
 //http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
 
 //will probably need to generate some RNG on the CPU and use a buffer
 //probably not good enough for the monte-carlo path trace simulation
-
-uint rng_state;
-
-uint rand_xorshift(){
-	rng_state ^= (rng_state << 13);
-    rng_state ^= (rng_state >> 17);
-    rng_state ^= (rng_state << 5);
-    return rng_state;
-}
-
-uint wang_hash(uint seed)
-{
-    seed = (seed ^ 61) ^ (seed >> 16);
-    seed *= 9;
-    seed = seed ^ (seed >> 4);
-    seed *= 0x27d4eb2d;
-    seed = seed ^ (seed >> 15);
-    return seed;
-}
 
 
 
@@ -72,7 +55,7 @@ void main()
 
 	uint index = gl_LaunchIDNV.y*gl_LaunchSizeNV.x + gl_LaunchIDNV.x;
 
-	rng_state = wang_hash(index * uint(i.flag[index] + 1));
+	rng_state = wang_hash(index * uint(cam.iteration));
 	pl.seed = rng_state;
 
 
@@ -119,7 +102,7 @@ void main()
 
 	finalColor = finalColor/4;
 
-	if (i.flag[index] == 0){
+	if (cam.iteration == 1){
 		a.acc[index] = vec4(0);
 	}
 
@@ -129,9 +112,8 @@ void main()
 		a.acc[index].xyz += finalColor;
 	}
 
-	i.flag[index] += 1;
 
-	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulate ? a.acc[index].xyz / i.flag[index] : finalColor , 0.0));
+	imageStore(image, ivec2(gl_LaunchIDNV.xy), vec4(accumulate ? a.acc[index].xyz / cam.iteration : finalColor , 0.0));
 
 	
 

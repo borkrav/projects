@@ -117,6 +117,9 @@
       <Filter>imgui</Filter>
     </None>
     <None Include="..\README.md" />
+    <None Include="..\shaders\rng.glsl">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="common">

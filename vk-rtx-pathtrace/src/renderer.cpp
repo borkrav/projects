@@ -36,6 +36,7 @@ struct UniformBufferObject
 	// #VKRay
 	glm::mat4 viewInverse;
 	glm::mat4 projInverse;
+	unsigned int iteration = 0;
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -111,7 +112,7 @@ auto Vertex::getAttributeDescriptions()
 //--------------------------------------------------------------------------------------------------
 // Called at each frame to update the camera matrix
 //
-void Renderer::updateUniformBuffer()
+void Renderer::updateUniformBuffer(unsigned int iteration)
 {
 	UniformBufferObject ubo = {};
 	ubo.model = glm::mat4(1);
@@ -126,6 +127,10 @@ void Renderer::updateUniformBuffer()
 	// #VKRay
 	ubo.viewInverse = glm::inverse(ubo.view);
 	ubo.projInverse = glm::inverse(ubo.proj);
+
+	ubo.iteration = iteration;
+
+
 
 	void* data;
 	vkMapMemory(VkCtx.getDevice(), m_uniformBufferMemory, 0, sizeof(ubo), 0, &data);
@@ -188,36 +193,8 @@ void Renderer::createAccumulationBuffer(int width, int height) {
 	VkCtx.createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		m_accumulationBuffer, m_accumulationBufferMemory);
-	void* data;
-	/*std::vector<glm::vec4>buff{ bufferSize, glm::vec4(0,0,0,0) };
-	vkMapMemory(VkCtx.getDevice(), m_sphereBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, buff.data(), bufferSize);
-	vkUnmapMemory(VkCtx.getDevice(), m_sphereBufferMemory);*/
 }
 
-void Renderer::createInvalidationBuffer(int width, int height)
-{
-	{
-		VkDeviceSize bufferSize = width * height * sizeof(int);
-		VkCtx.createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			m_invalidationBuffer, m_invalidationBufferMemory);
-		void* data;
-		std::vector<int> vals(bufferSize, 0);
-		vkMapMemory(VkCtx.getDevice(), m_invalidationBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, vals.data(), bufferSize);
-		vkUnmapMemory(VkCtx.getDevice(), m_invalidationBufferMemory);
-	}
-}
-
-void Renderer::clearBuffers(int width, int height) {
-	VkDeviceSize bufferSize = width * height * sizeof(int);
-	void* data;
-	std::vector<int> vals(bufferSize, 0);
-	vkMapMemory(VkCtx.getDevice(), m_invalidationBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, vals.data(), bufferSize);
-	vkUnmapMemory(VkCtx.getDevice(), m_invalidationBufferMemory);
-}
 
 
 //--------------------------------------------------------------------------------------------------
@@ -445,12 +422,8 @@ void Renderer::destroyResources()
 	vkDestroyBuffer(VkCtx.getDevice(), m_sphereBuffer, nullptr);
 	vkFreeMemory(VkCtx.getDevice(), m_sphereBufferMemory, nullptr);
 
-
 	vkDestroyBuffer(VkCtx.getDevice(), m_accumulationBuffer, nullptr);
 	vkFreeMemory(VkCtx.getDevice(), m_accumulationBufferMemory, nullptr);
-
-	vkDestroyBuffer(VkCtx.getDevice(), m_invalidationBuffer, nullptr);
-	vkFreeMemory(VkCtx.getDevice(), m_invalidationBufferMemory, nullptr);
 
 	for (size_t i = 0; i < m_textureImage.size(); i++)
 	{
@@ -818,8 +791,6 @@ void Renderer::createRaytracingDescriptorSet()
 	m_rtDSG.AddBinding(7, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_INTERSECTION_BIT_NV | VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV);
 	// Accumulation buffer
 	m_rtDSG.AddBinding(8, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_NV);
-	// Invalidation buffer
-	m_rtDSG.AddBinding(9, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_NV);
 
 	// Create the descriptor pool and layout
 	m_rtDescriptorPool = m_rtDSG.GeneratePool(VkCtx.getDevice());
@@ -885,12 +856,6 @@ void Renderer::createRaytracingDescriptorSet()
 	accumulationInfo.range = VK_WHOLE_SIZE;
 	m_rtDSG.Bind(m_rtDescriptorSet, 8, { accumulationInfo });
 
-	// invalidation buffer
-	VkDescriptorBufferInfo invalidationInfo = {};
-	invalidationInfo.buffer = m_invalidationBuffer;
-	invalidationInfo.offset = 0;
-	invalidationInfo.range = VK_WHOLE_SIZE;
-	m_rtDSG.Bind(m_rtDescriptorSet, 9, { invalidationInfo });
 
 	// Textures
 	std::vector<VkDescriptorImageInfo> imageInfos;
@@ -922,6 +887,16 @@ void Renderer::updateRaytracingRenderTarget(VkImageView target)
 	m_rtDSG.Bind(m_rtDescriptorSet, 1, { descriptorOutputImageInfo });
 	// Copy the bound resource handles into the descriptor set
 	m_rtDSG.UpdateSetContents(VkCtx.getDevice(), m_rtDescriptorSet);
+}
+
+
+void Renderer::updateRaytracingAccumulationBuffer() {
+	// accumulation buffer
+	VkDescriptorBufferInfo accumulationInfo = {};
+	accumulationInfo.buffer = m_accumulationBuffer;
+	accumulationInfo.offset = 0;
+	accumulationInfo.range = VK_WHOLE_SIZE;
+	m_rtDSG.Bind(m_rtDescriptorSet, 8, { accumulationInfo });
 }
 
 //--------------------------------------------------------------------------------------------------

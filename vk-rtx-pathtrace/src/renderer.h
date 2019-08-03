@@ -48,16 +48,13 @@ public:
 	void createAABBBuffer(const std::vector<AABB>& vertex);
 
 	void createAccumulationBuffer(int width, int height);
-	void createInvalidationBuffer(int width, int height);
 
-
-	void clearBuffers(int width, int height);
 
 	void      createIndexBuffer(const std::vector<uint32_t>& indices);
 	void      createUniformBuffer();
 	void      createTextureImages(const std::vector<std::string>& textures);
 	VkSampler createTextureSampler();
-	void      updateUniformBuffer();
+	void      updateUniformBuffer(unsigned int iteration);
 
 	//AABB
 	void createProcGeometry();
@@ -93,8 +90,6 @@ public:
 	VkBuffer       m_accumulationBuffer;
 	VkDeviceMemory m_accumulationBufferMemory;
 
-	VkBuffer       m_invalidationBuffer;
-	VkDeviceMemory m_invalidationBufferMemory;
 
 	VkExtent2D m_framebufferSize;
 
@@ -171,6 +166,8 @@ public:
 	VkDescriptorPool                      m_rtDescriptorPool;
 	VkDescriptorSetLayout                 m_rtDescriptorSetLayout;
 	VkDescriptorSet                       m_rtDescriptorSet;
+
+	void updateRaytracingAccumulationBuffer();
 
 	void             createRaytracingPipeline();
 	VkPipelineLayout m_rtPipelineLayout = VK_NULL_HANDLE;
