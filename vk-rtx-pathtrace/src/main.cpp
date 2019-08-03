@@ -225,21 +225,21 @@ int main(int argc, char** argv)
 		ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
 	}
 
-	Renderer helloVulkan;
-	helloVulkan.loadModel("../media/scenes/cube_multi.obj");
-	helloVulkan.createProcGeometry();
-	helloVulkan.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
-	helloVulkan.createUniformBuffer();
+	Renderer m_renderer;
+	m_renderer.loadModel("../media/scenes/cube_multi.obj");
+	m_renderer.createProcGeometry();
+	m_renderer.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
+	m_renderer.createUniformBuffer();
 
-	helloVulkan.createAccumulationBuffer(g_winWidth, g_winHeight);
+	m_renderer.createAccumulationBuffer(g_winWidth, g_winHeight);
 
 	// #VKRay
-	helloVulkan.initRayTracing();
-	helloVulkan.createGeometryInstances();
-	helloVulkan.createAccelerationStructures();
-	helloVulkan.createRaytracingDescriptorSet();
-	helloVulkan.createRaytracingPipeline();
-	helloVulkan.createShaderBindingTable();
+	m_renderer.initRayTracing();
+	m_renderer.createGeometryInstances();
+	m_renderer.createAccelerationStructures();
+	m_renderer.createRaytracingDescriptorSet();
+	m_renderer.createRaytracingPipeline();
+	m_renderer.createShaderBindingTable();
 
 
 	ImVec4 clear_color = ImVec4(1, 1, 1, 1.00f);
@@ -262,21 +262,21 @@ int main(int argc, char** argv)
 		if (g_ResizeWanted)
 		{
 			VkCtx.resizeVulkan(g_winWidth, g_winHeight);
-			helloVulkan.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
+			m_renderer.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
 			backBufferFrames = IMGUI_VK_QUEUED_FRAMES;
 
-			vkDestroyBuffer(VkCtx.getDevice(), helloVulkan.m_accumulationBuffer, nullptr);
-			vkFreeMemory(VkCtx.getDevice(), helloVulkan.m_accumulationBufferMemory, nullptr);
-			helloVulkan.createAccumulationBuffer(g_winWidth, g_winHeight);
+			vkDestroyBuffer(VkCtx.getDevice(), m_renderer.m_accumulationBuffer, nullptr);
+			vkFreeMemory(VkCtx.getDevice(), m_renderer.m_accumulationBufferMemory, nullptr);
+			m_renderer.createAccumulationBuffer(g_winWidth, g_winHeight);
 
-			helloVulkan.updateRaytracingAccumulationBuffer();
+			m_renderer.updateRaytracingAccumulationBuffer();
 
 			iteration = 0;
 
 		}
 		g_ResizeWanted = false;
 
-		helloVulkan.updateUniformBuffer(iteration += 1);
+		m_renderer.updateUniformBuffer(iteration += 1);
 
 		// 1. Show a simple window.
 		// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets
@@ -526,27 +526,27 @@ int main(int argc, char** argv)
 				VK_IMAGE_LAYOUT_GENERAL);
 		}
 
-		helloVulkan.updateRaytracingRenderTarget(VkCtx.getCurrentBackBufferView());
+		m_renderer.updateRaytracingRenderTarget(VkCtx.getCurrentBackBufferView());
 
 		VkCtx.beginRenderPass();
 
-		vkCmdBindPipeline(cmdBuff, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, helloVulkan.m_rtPipeline);
+		vkCmdBindPipeline(cmdBuff, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, m_renderer.m_rtPipeline);
 
 		vkCmdBindDescriptorSets(cmdBuff, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
-			helloVulkan.m_rtPipelineLayout, 0, 1, &helloVulkan.m_rtDescriptorSet,
+			m_renderer.m_rtPipelineLayout, 0, 1, &m_renderer.m_rtDescriptorSet,
 			0, nullptr);
 
-		VkDeviceSize rayGenOffset = helloVulkan.m_sbtGen.GetRayGenOffset();
-		VkDeviceSize missOffset = helloVulkan.m_sbtGen.GetMissOffset();
-		VkDeviceSize missStride = helloVulkan.m_sbtGen.GetMissEntrySize();
-		VkDeviceSize hitGroupOffset = helloVulkan.m_sbtGen.GetHitGroupOffset();
-		VkDeviceSize hitGroupStride = helloVulkan.m_sbtGen.GetHitGroupEntrySize();
+		VkDeviceSize rayGenOffset = m_renderer.m_sbtGen.GetRayGenOffset();
+		VkDeviceSize missOffset = m_renderer.m_sbtGen.GetMissOffset();
+		VkDeviceSize missStride = m_renderer.m_sbtGen.GetMissEntrySize();
+		VkDeviceSize hitGroupOffset = m_renderer.m_sbtGen.GetHitGroupOffset();
+		VkDeviceSize hitGroupStride = m_renderer.m_sbtGen.GetHitGroupEntrySize();
 
-		vkCmdTraceRaysNV(cmdBuff, helloVulkan.m_shaderBindingTableBuffer, rayGenOffset,
-			helloVulkan.m_shaderBindingTableBuffer, missOffset, missStride,
-			helloVulkan.m_shaderBindingTableBuffer, hitGroupOffset, hitGroupStride,
-			VK_NULL_HANDLE, 0, 0, helloVulkan.m_framebufferSize.width,
-			helloVulkan.m_framebufferSize.height, 1);
+		vkCmdTraceRaysNV(cmdBuff, m_renderer.m_shaderBindingTableBuffer, rayGenOffset,
+			m_renderer.m_shaderBindingTableBuffer, missOffset, missStride,
+			m_renderer.m_shaderBindingTableBuffer, hitGroupOffset, hitGroupStride,
+			VK_NULL_HANDLE, 0, 0, m_renderer.m_framebufferSize.width,
+			m_renderer.m_framebufferSize.height, 1);
 
 	
 
@@ -566,7 +566,7 @@ int main(int argc, char** argv)
 	check_vk_result(err);
 	ImGui_ImplGlfwVulkan_Shutdown();
 	ImGui::DestroyContext();
-	helloVulkan.destroyResources();
+	m_renderer.destroyResources();
 	VkCtx.cleanupVulkan();
 
 	glfwDestroyWindow(window);
