@@ -20,6 +20,8 @@
 #include "renderer.h"
 #include "manipulator.h"
 #include "vk_context.h"
+#include "scene.h"
+#include "utility.h"
 
 static bool g_ResizeWanted = false;
 static int  g_winWidth = 1650, g_winHeight = 1200;
@@ -225,17 +227,42 @@ int main(int argc, char** argv)
 		ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
 	}
 
-	Renderer m_renderer;
-	m_renderer.loadModel("../media/scenes/cube_multi.obj");
-	m_renderer.createProcGeometry();
+
+
+	Scene m_scene;
+
+	Sphere s1(glm::vec3(0, 1.001, 0), 0.5);
+	Sphere s2(glm::vec3(0, -99.5, 0), 100);
+	Sphere s3(glm::vec3(2, 1.501, 0), 1);
+	Sphere s4(glm::vec3(-2, 1.501, 0), 1);
+	Sphere s5(glm::vec3(0, 1.201, -2), 0.3);
+	Sphere s6(glm::vec3(0, 1.201, 2), 0.3);
+
+	m_scene.addSphere(s1);
+	m_scene.addSphere(s2);
+	m_scene.addSphere(s3);
+	m_scene.addSphere(s4);
+	m_scene.addSphere(s5);
+	m_scene.addSphere(s6);
+
+	Renderer m_renderer(m_scene);
+
 	m_renderer.m_framebufferSize = { static_cast<uint32_t>(g_winWidth), static_cast<uint32_t>(g_winHeight) };
 	m_renderer.createUniformBuffer();
 
 	m_renderer.createAccumulationBuffer(g_winWidth, g_winHeight);
 
+
+	//one BLAS to represent all spheres
+	//for every sphere, we instance a TLAS with transformation matrix
+	//buffer with sphere information in pipeline
+
+	
+
+
+
 	// #VKRay
 	m_renderer.initRayTracing();
-	m_renderer.createGeometryInstances();
 	m_renderer.createAccelerationStructures();
 	m_renderer.createRaytracingDescriptorSet();
 	m_renderer.createRaytracingPipeline();

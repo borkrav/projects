@@ -1,4 +1,10 @@
 
+
+
+//RNG code taken from here
+//http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
+//it's probably good enough for now, enhance later if I need to
+
 uint rng_state;
 
 

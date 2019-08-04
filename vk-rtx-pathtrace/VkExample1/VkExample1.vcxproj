@@ -28,6 +28,8 @@
     <ClCompile Include="..\libs\vulkannv\vulkan_raytracing.cpp" />
     <ClCompile Include="..\src\renderer.cpp" />
     <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\scene.cpp" />
+    <ClCompile Include="..\src\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\manipulator.h" />
@@ -49,6 +51,8 @@
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\TopLevelASGenerator.h" />
     <ClInclude Include="..\libs\vulkannv\nv_helpers_vk\VKHelpers.h" />
     <ClInclude Include="..\src\renderer.h" />
+    <ClInclude Include="..\src\scene.h" />
+    <ClInclude Include="..\src\utility.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\libs\imgui\README.md" />

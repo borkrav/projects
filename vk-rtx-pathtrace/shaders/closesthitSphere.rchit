@@ -4,6 +4,8 @@
 
 #include "rng.glsl"
 
+hitAttributeNV vec3 attribs;
+
 struct payload {
 	vec3 hitValue;
 	vec3 origin;
@@ -13,7 +15,6 @@ struct payload {
 }; 
 
 layout(location = 0) rayPayloadInNV payload pl;
-hitAttributeNV vec3 attribs;
 
 
 struct sphere {
@@ -22,9 +23,6 @@ struct sphere {
 };
 
 layout(binding = 7) readonly buffer SphereData{ sphere [] spheres; };
-
-
-
 
 
 
@@ -41,8 +39,8 @@ void main()
 	const float tMax = gl_RayTmaxNV;
 
 
+	//fetch sphere information
 	sphere instance = spheres[gl_InstanceCustomIndexNV - 1];
-
 	const vec3 center = instance.centre;
 	const float radius = instance.radius;
 
@@ -52,14 +50,12 @@ void main()
 
 	rng_state = pl.seed;
 
-
-
-	if (gl_HitTNV > 0.000000000001){
+	//epsilon check
+	if (gl_HitTNV > 1e-15){
 
 		vec3 dir;
 
 		//this is for safety - to avoid infinite loop
-		//it happens because of bad seed probably
 		int count = 0;
 		
 		do{ 
@@ -71,17 +67,15 @@ void main()
 		
 			vec3 rng = vec3(val1, val2, val3);
 
-		
 			dir = 2.0*rng - vec3(1.0,1.0,1.0);
 
 			count += 1;
 
-		} while (dot(dir,dir) >= 1 && count < 100);    
+		} while (dot(dir,dir) >= 1 && count < 1000);    
 	
 		vec3 target = intersection + normal + dir;
 
-
-
+		//write information for next bounce
 		pl.hitValue = vec3(0.5);
 		pl.origin = intersection;
 		pl.direction = target-intersection;

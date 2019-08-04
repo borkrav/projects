@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.h>
 
 #include "obj_loader.h"
+#include "scene.h"
 
 // #VKRay
 #include "nv_helpers_vk/BottomLevelASGenerator.h"
@@ -16,6 +17,7 @@
 #include "nv_helpers_vk/ShaderBindingTableGenerator.h"
 #include "nv_helpers_vk/TopLevelASGenerator.h"
 #include "nv_helpers_vk/VKHelpers.h"
+
 
 struct Vertex
 {
@@ -41,6 +43,9 @@ struct AABB
 class Renderer
 {
 public:
+
+	Renderer(Scene s);
+
 	void loadModel(const std::string& filename);
 	void createMaterialBuffer(const std::vector<MatrialObj>& materials);
 	void createVertexBuffer(const std::vector<Vertex>& vertex);
@@ -57,9 +62,10 @@ public:
 	void      updateUniformBuffer(unsigned int iteration);
 
 	//AABB
-	void createProcGeometry();
 
 	void destroyResources();
+
+	Scene m_scene;
 
 	VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
 	VkPipelineLayout      m_pipelineLayout = VK_NULL_HANDLE;
@@ -120,14 +126,10 @@ public:
 		glm::mat4x4  transform;
 	};
 
-	struct Sphere {
-		glm::vec3 centre;
-		float radius;
-	};
+	
 
-	void createSphereBuffer(const std::vector<Sphere>& spheres);
+	void createSphereBuffer(const std::vector<SphereBinding>& spheres);
 
-	void                          createGeometryInstances();
 	std::vector<GeometryInstance> m_geometryInstances;
 
 

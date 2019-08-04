@@ -3,6 +3,7 @@
  *****************************************************************************/
 
 #include "renderer.h"
+#include "utility.h"
 
 #include <fstream>
 #include <iostream>
@@ -109,6 +110,43 @@ auto Vertex::getAttributeDescriptions()
 	return attributeDescriptions;
 }
 
+
+
+
+
+Renderer::Renderer(Scene s):m_scene(s) {
+
+
+	loadModel("../media/scenes/cube_multi.obj");
+
+
+	//do sphere operations
+	if (m_scene.spheres.size() > 0) {
+
+		m_AABB = std::vector<AABB>{ AABB{glm::vec3{-0.5, -0.5, -0.5}, glm::vec3{0.5, 0.5, 0.5}} };
+		createAABBBuffer(m_AABB);
+
+		std::vector<SphereBinding> sphereBufferData;
+
+		for (auto sphere : m_scene.spheres) {
+			sphereBufferData.push_back(SphereBinding{ sphere.getCentre(), sphere.getRadius() });
+		}
+
+		createSphereBuffer(sphereBufferData);
+	}
+
+
+	//create geometries
+	m_geometryInstances.push_back(
+		{ m_vertexBuffer, m_nbVertices, 0, m_indexBuffer, m_nbIndices, 0, false, glm::mat4(1) });
+
+	m_geometryInstances.push_back({ m_procBuffer, NULL, 0, NULL, NULL, 0, true, glm::mat4(1) });
+
+}
+
+
+
+
 //--------------------------------------------------------------------------------------------------
 // Called at each frame to update the camera matrix
 //
@@ -155,29 +193,14 @@ void Renderer::loadModel(const std::string& filename)
 	createTextureImages(loader.m_textures);
 }
 
-//--------------------------------------------------------------------------------------------------
-// Create procedural geometry
-//
-void Renderer::createProcGeometry()
-{
-
-	m_AABB = std::vector<AABB>{ AABB{glm::vec3{-0.5, -0.5, -0.5}, glm::vec3{0.5, 0.5, 0.5}} };
-	createAABBBuffer(m_AABB);
-	
-	std::vector<Sphere> spheres = std::vector<Sphere>{ Sphere{glm::vec3{0,1.001,0}, 0.5},
-													   Sphere{glm::vec3{0,-99.5,0}, 100}};
-	createSphereBuffer(spheres);
-
-}
-
 
 //--------------------------------------------------------------------------------------------------
 // Create a buffer holding sphere centres and radiuses
 //
-void Renderer::createSphereBuffer(const std::vector<Sphere>& spheres)
+void Renderer::createSphereBuffer(const std::vector<SphereBinding>& spheres)
 {
 	{
-		VkDeviceSize bufferSize = spheres.size() * sizeof(Sphere);
+		VkDeviceSize bufferSize = spheres.size() * sizeof(SphereBinding);
 		VkCtx.createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			m_sphereBuffer, m_sphereBufferMemory);
@@ -466,29 +489,6 @@ void Renderer::initRayTracing()
 	vkGetPhysicalDeviceProperties2(VkCtx.getPhysicalDevice(), &props);
 }
 
-//--------------------------------------------------------------------------------------------------
-// Create the instances from the scene data
-// #VKRay
-void Renderer::createGeometryInstances()
-{
-	// The importer always imports the geometry as a single instance, without a
-	// transform. Using a more complex importer, this should be adapted.
-	glm::mat4x4 mat1 = glm::mat4x4(	1, 0, 0, 0, 
-									0, 1, 0, 0, 
-									0, 0, 1, 0, 
-									0, 0, 0, 1);
-	glm::mat4x4 mat2 = glm::mat4x4(	1, 0, 0, 0, 
-									0, 1, 0, 0, 
-									0, 0, 1, 0, 
-									0, 0, 0, 1);
-
-
-	m_geometryInstances.push_back(
-		{ m_vertexBuffer, m_nbVertices, 0, m_indexBuffer, m_nbIndices, 0, false, mat1 });
-
-	m_geometryInstances.push_back({ m_procBuffer, NULL, 0, NULL, NULL, 0, true, mat2 });
-}
-
 
 //--------------------------------------------------------------------------------------------------
 //
@@ -674,7 +674,9 @@ void Renderer::createAccelerationStructures()
 	m_bottomLevelAS.resize(m_geometryInstances.size());
 
 	std::vector<std::pair<VkAccelerationStructureNV, glm::mat4x4>> instances;
+	std::vector<int> hitGroups;
 
+	//create 2 BLAS
 	for (size_t i = 0; i < m_geometryInstances.size(); i++)
 	{
 		m_bottomLevelAS[i] = createBottomLevelAS(
@@ -684,23 +686,22 @@ void Renderer::createAccelerationStructures()
 								m_geometryInstances[i].indexCount, m_geometryInstances[i].indexOffset,
 								m_geometryInstances[i].isAABB},
 			});
-		instances.push_back({ m_bottomLevelAS[i].structure, m_geometryInstances[i].transform });
 	}
 
-	//these are the various geometric instances
+
+	//cube
+	instances.push_back({ m_bottomLevelAS[0].structure, m_geometryInstances[0].transform });
 	instances[0].second = glm::translate(instances[0].second, glm::vec3(0, 30, 0));
 	instances[0].second = glm::scale(instances[0].second, glm::vec3(0.2, 0.2, 0.2));
-	instances[1].second = glm::translate(instances[1].second, glm::vec3(0, 1.001, 0));
+	hitGroups.push_back(0);
 
-	//put 2 more spheres
-	instances.push_back({ m_bottomLevelAS[1].structure, m_geometryInstances[1].transform });
-	//instances.push_back({ m_bottomLevelAS[1].structure, m_geometryInstances[1].transform });
 
-	instances[2].second = glm::translate(instances[2].second, glm::vec3(0, -99.5, 0));
-	instances[2].second = glm::scale(instances[2].second, glm::vec3(200, 200, 200));
-	//instances[3].second = glm::translate(instances[3].second, glm::vec3(1.5, 1, 0));
+	//spheres
+	for (auto sphere : m_scene.spheres) {
+		instances.push_back({ m_bottomLevelAS[1].structure, sphere.getTransform() });
+		hitGroups.push_back(1);
+	}
 
-	std::vector<int> hitGroups{ 0,1,1 };
 
 	// Create the top-level AS from the previously computed BLAS
 	createTopLevelAS(commandBuffer, instances, hitGroups, VK_FALSE);
