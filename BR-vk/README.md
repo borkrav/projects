@@ -12,7 +12,7 @@ Vulkan Renderer
 
 
 1. Split current tutorial code into distinct classes for readability/understandability. Going to get it to work on my own hardware, not going to care about the general case
-2. Put in simple GUI, IMGui, take from Nvidia Tutorial
+2. Add Dear ImGui, follow tutorial, understand how this works
 3. Read .OBJ file, create buffers, similar to Nvidia Tutorial, draw the cube, try other scenes
 4. Start learning about lighting/shading
 5. Add in screenshot from other tutorial

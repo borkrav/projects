@@ -14,16 +14,16 @@
 #include <stdexcept>
 #include <vector>
 
-#include "BRCommandPool.h"
-#include "BRDevice.h"
-#include "BRFramebuffer.h"
-#include "BRInstance.h"
-#include "BRPipeline.h"
-#include "BRRenderPass.h"
-#include "BRSurface.h"
-#include "BRSwapchain.h"
-#include "BRSyncMgr.h"
-#include "BRVBOMgr.h"
+#include <BRCommandPool.h>
+#include <BRDevice.h>
+#include <BRFramebuffer.h>
+#include <BRInstance.h>
+#include <BRPipeline.h>
+#include <BRRenderPass.h>
+#include <BRSurface.h>
+#include <BRSwapchain.h>
+#include <BRSyncMgr.h>
+#include <BRVBOMgr.h>
 
 class VkRender
 {

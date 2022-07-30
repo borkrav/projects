@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "VkRender.h"
+#include <VkRender.h>
 
 int main()
 {

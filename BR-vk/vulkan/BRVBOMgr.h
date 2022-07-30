@@ -5,8 +5,8 @@
 
 #include <vector>
 
-#include "BRDevice.h"
-#include "BRPipeline.h"
+#include <BRDevice.h>
+#include <BRPipeline.h>
 
 namespace BR
 {

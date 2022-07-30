@@ -2,8 +2,8 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include "BRInstance.h"
-#include "BRSurface.h"
+#include <BRInstance.h>
+#include <BRSurface.h>
 
 namespace BR
 {
