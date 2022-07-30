@@ -6,15 +6,13 @@
 
 using namespace BR;
 
-CommandPool::CommandPool()
-    : m_commandPool( VK_NULL_HANDLE ), m_commandBuffer( VK_NULL_HANDLE )
+CommandPool::CommandPool() : m_commandPool( VK_NULL_HANDLE )
 {
 }
 
 CommandPool::~CommandPool()
 {
-    assert( m_commandPool == VK_NULL_HANDLE &&
-            m_commandBuffer == VK_NULL_HANDLE );
+    assert( m_commandPool == VK_NULL_HANDLE );
 }
 
 void CommandPool::create( Device& device )
@@ -37,12 +35,14 @@ void CommandPool::create( Device& device )
     printf( "\nCreated Command Pool\n" );
 }
 
-void CommandPool::createBuffer( Device& device )
+VkCommandBuffer CommandPool::createBuffer( Device& device )
 {
     /*
     * Record work commands into this
     * Submit this to the queue for the GPU to work on
     */
+
+    VkCommandBuffer buff;
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -51,22 +51,18 @@ void CommandPool::createBuffer( Device& device )
     allocInfo.commandBufferCount = 1;
 
     VkResult result = vkAllocateCommandBuffers( device.getLogicalDevice(),
-                                                &allocInfo, &m_commandBuffer );
+                                                &allocInfo, &buff );
 
     checkSuccess( result );
 
     printf( "\nCreated Command Buffer\n" );
+
+    return buff;
 }
 
 void CommandPool::destroy( Device& device )
 {
     vkDestroyCommandPool( device.getLogicalDevice(), m_commandPool, nullptr );
 
-    m_commandBuffer = VK_NULL_HANDLE;
     m_commandPool = VK_NULL_HANDLE;
-}
-
-VkCommandBuffer CommandPool::getBuffer()
-{
-    return m_commandBuffer;
 }

@@ -14,13 +14,10 @@ class CommandPool
     ~CommandPool();
 
     void create( Device& device );
-    void createBuffer( Device& device );
+    VkCommandBuffer createBuffer( Device& device );
     void destroy( Device& device );
-
-    VkCommandBuffer getBuffer();
 
    private:
     VkCommandPool m_commandPool;
-    VkCommandBuffer m_commandBuffer;
 };
 }  // namespace BR

@@ -1,3 +1,5 @@
+#pragma once
+
 #define GLFW_INCLUDE_VULKAN
 
 #include <GLFW/glfw3.h>
@@ -27,6 +29,7 @@ class VkRender
 {
    public:
     void run();
+    bool m_framebufferResized = false;
 
    private:
     GLFWwindow* m_window;
@@ -42,11 +45,15 @@ class VkRender
     BR::SyncMgr m_syncMgr;
     BR::VBOMgr m_vboMgr;
 
-    VkSemaphore m_imageAvailableSemaphore;
-    VkSemaphore m_renderFinishedSemaphore;
-    VkFence m_inFlightFence;
+    std::vector<VkCommandBuffer> m_commandBuffers;
+    std::vector<VkSemaphore> m_imageAvailableSemaphores;
+    std::vector<VkSemaphore> m_renderFinishedSemaphores;
+    std::vector<VkFence> m_inFlightFences;
 
     VkBuffer m_vertexBuffer;
+
+    int m_currentFrame = 0;
+    
 
     const std::vector<BR::Pipeline::Vertex> m_vertices = {
         { { 0.0f, -0.5f }, { 1.0f, 1.0f, 1.0f } },
@@ -56,15 +63,14 @@ class VkRender
     void initWindow();
     void initVulkan();
 
+    void recreateSwapchain();
+
     void recordCommandBuffer( VkCommandBuffer commandBuffer,
                               uint32_t imageIndex );
     void mainLoop();
     void drawFrame();
     void cleanup();
 };
-
-
-
 
 /*
     Swap chain gives you the images (VRAM)
