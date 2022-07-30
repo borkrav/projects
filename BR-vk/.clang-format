@@ -1,0 +1,11 @@
+BasedOnStyle: Google
+
+BreakBeforeBraces: Allman
+AllowShortFunctionsOnASingleLine: false
+SpacesInParentheses: true
+IndentWidth: 4
+DerivePointerAlignment: false 
+PointerAlignment: Left
+AllowShortIfStatementsOnASingleLine: false 
+AllowShortLoopsOnASingleLine: false
+ReflowComments: false
