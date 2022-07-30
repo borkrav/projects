@@ -1,11 +1,11 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include "VkInstance.h"
+#include "VkRender.h"
 
 int main()
 {
-    VulkanEngine app;
+    VkRender app;
 
     try
     {

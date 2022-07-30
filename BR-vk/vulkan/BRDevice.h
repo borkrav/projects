@@ -3,6 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include "BRInstance.h"
+#include "BRSurface.h"
 
 namespace BR
 {
@@ -12,7 +13,7 @@ class Device
     Device();
     ~Device();
 
-    void create( Instance &instance, const std::vector<const char*>&deviceExtensions, VkSurfaceKHR surface);
+    void create( Instance& instance, const std::vector<const char*>&deviceExtensions, Surface& surface);
     void destroy();
     VkPhysicalDevice getPhysicaDevice();
     VkDevice getLogicalDevice();

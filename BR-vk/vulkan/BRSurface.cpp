@@ -14,7 +14,6 @@ Surface::~Surface()
     assert( m_surface == VK_NULL_HANDLE );
 }
 
-//TODO surface should be it's own object
 void Surface::create(Instance &instance, GLFWwindow* m_window )
 {
      VkResult result =

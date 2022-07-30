@@ -18,7 +18,7 @@ Device::~Device()
 }
 
 //TODO surface should be it's own object
-void Device::create(Instance &instance, const std::vector<const char*>&deviceExtensions, VkSurfaceKHR surface )
+void Device::create(Instance& instance, const std::vector<const char*>&deviceExtensions, Surface& surface )
 {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices( instance.get(), &deviceCount, nullptr );
@@ -106,7 +106,7 @@ void Device::create(Instance &instance, const std::vector<const char*>&deviceExt
 
     // assuming the graphics queue also has presentation support
     VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, graphicsFamilyIndex, surface,
+    vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, graphicsFamilyIndex, surface.get(),
                                           &presentSupport );
     assert( presentSupport );
 
@@ -138,7 +138,7 @@ void Device::create(Instance &instance, const std::vector<const char*>&deviceExt
 
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, famCounter++,
-                                              surface, &presentSupport );
+                                              surface.get(), &presentSupport );
 
         printf( "\tPresentation Support: %d\n\n", presentSupport );
     }
