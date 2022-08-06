@@ -45,12 +45,14 @@ class BRRender
     SyncMgr m_syncMgr;
     VBOMgr m_vboMgr;
 
-    std::vector<VkCommandBuffer> m_commandBuffers;
-    std::vector<VkSemaphore> m_imageAvailableSemaphores;
-    std::vector<VkSemaphore> m_renderFinishedSemaphores;
-    std::vector<VkFence> m_inFlightFences;
+    vk::Device m_device;
 
-    VkBuffer m_vertexBuffer;
+    std::vector<vk::CommandBuffer> m_commandBuffers;
+    std::vector<vk::Semaphore> m_imageAvailableSemaphores;
+    std::vector<vk::Semaphore> m_renderFinishedSemaphores;
+    std::vector<vk::Fence> m_inFlightFences;
+
+    vk::Buffer m_vertexBuffer;
 
     int m_currentFrame = 0;
 
@@ -64,7 +66,7 @@ class BRRender
 
     void recreateSwapchain();
 
-    void recordCommandBuffer( VkCommandBuffer commandBuffer,
+    void recordCommandBuffer( vk::CommandBuffer commandBuffer,
                               uint32_t imageIndex );
     void mainLoop();
     void drawFrame();

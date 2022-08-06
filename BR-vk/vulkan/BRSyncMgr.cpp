@@ -6,7 +6,7 @@
 
 using namespace BR;
 
-SyncMgr::SyncMgr()
+SyncMgr::SyncMgr() : m_device( nullptr )
 {
 }
 
@@ -15,46 +15,51 @@ SyncMgr::~SyncMgr()
     assert( m_fences.empty() && m_semaphores.empty() );
 }
 
-VkSemaphore SyncMgr::createSemaphore()
+vk::Semaphore SyncMgr::createSemaphore()
 {
-    VkSemaphore sem;
+    if ( !m_device )
+        m_device = AppState::instance().getLogicalDevice();
 
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    auto info = vk::SemaphoreCreateInfo();
 
-    VkResult result =
-        vkCreateSemaphore( AppState::instance().getLogicalDevice(),
-                           &semaphoreInfo, nullptr, &sem );
-
-    checkSuccess( result );
-
-    return sem;
+    try
+    {
+        vk::Semaphore sem = m_device.createSemaphore( info );
+        return sem;
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error(
+            "failed to create synchronization objects for a frame!" );
+    }
 }
 
-VkFence SyncMgr::createFence()
+vk::Fence SyncMgr::createFence()
 {
-    VkFence fence;
+    if ( !m_device )
+        m_device = AppState::instance().getLogicalDevice();
 
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    auto info = vk::FenceCreateInfo( vk::FenceCreateFlagBits::eSignaled );
 
-    VkResult result = vkCreateFence( AppState::instance().getLogicalDevice(),
-                                     &fenceInfo, nullptr, &fence );
-    checkSuccess( result );
-
-    return fence;
+    try
+    {
+        vk::Fence fence = m_device.createFence( info );
+        return fence;
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error(
+            "failed to create synchronization objects for a frame!" );
+    }
 }
 
 void SyncMgr::destroy()
 {
     for ( auto sem : m_semaphores )
-        vkDestroySemaphore( AppState::instance().getLogicalDevice(), sem,
-                            nullptr );
+        m_device.destroySemaphore( sem );
 
     for ( auto fence : m_fences )
-        vkDestroyFence( AppState::instance().getLogicalDevice(), fence,
-                        nullptr );
+        m_device.destroyFence( fence );
 
     m_semaphores.clear();
     m_fences.clear();

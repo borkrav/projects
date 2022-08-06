@@ -13,12 +13,13 @@ class SyncMgr
     SyncMgr();
     ~SyncMgr();
 
-    VkSemaphore createSemaphore();
-    VkFence createFence();
+    vk::Semaphore createSemaphore();
+    vk::Fence createFence();
     void destroy();
 
    private:
-    std::vector<VkSemaphore> m_semaphores;
-    std::vector<VkFence> m_fences;
+    std::vector<vk::Semaphore> m_semaphores;
+    std::vector<vk::Fence> m_fences;
+    vk::Device m_device;
 };
 }  // namespace BR

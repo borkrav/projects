@@ -24,15 +24,15 @@ void Framebuffer::create( RenderPass& renderpass )
 
     auto imageViews = AppState::instance().getImageViews();
     auto extent = AppState::instance().getSwapchainExtent();
+    m_device = AppState::instance().getLogicalDevice();
 
     m_swapChainFramebuffers.resize( imageViews.size() );
 
     for ( size_t i = 0; i < imageViews.size(); i++ )
     {
-        VkImageView attachments[] = { imageViews[i] };
+        vk::ImageView attachments[] = { imageViews[i] };
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        vk::FramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.renderPass = renderpass.get();
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = attachments;
@@ -40,10 +40,15 @@ void Framebuffer::create( RenderPass& renderpass )
         framebufferInfo.height = extent.height;
         framebufferInfo.layers = 1;
 
-        VkResult result = vkCreateFramebuffer(
-            AppState::instance().getLogicalDevice(), &framebufferInfo, nullptr,
-            &m_swapChainFramebuffers[i] );
-        checkSuccess( result );
+        try
+        {
+            m_swapChainFramebuffers[i] =
+                m_device.createFramebuffer( framebufferInfo );
+        }
+        catch ( vk::SystemError err )
+        {
+            throw std::runtime_error( "failed to create framebuffer!" );
+        }
     }
 
     printf( "\nCreated %d Frame Buffers\n",
@@ -53,13 +58,12 @@ void Framebuffer::create( RenderPass& renderpass )
 void Framebuffer::destroy()
 {
     for ( auto framebuffer : m_swapChainFramebuffers )
-        vkDestroyFramebuffer( AppState::instance().getLogicalDevice(),
-                              framebuffer, nullptr );
+        m_device.destroyFramebuffer( framebuffer );
 
     m_swapChainFramebuffers.clear();
 }
 
-std::vector<VkFramebuffer>& Framebuffer::get()
+std::vector<vk::Framebuffer>& Framebuffer::get()
 {
     return m_swapChainFramebuffers;
 }

@@ -14,23 +14,18 @@ Device::Device()
 {
 }
 
-Device::~Device()
-{
-    assert( m_logicalDevice == VK_NULL_HANDLE );
-}
-
 //TODO surface should be it's own object
 void Device::create( const std::vector<const char*>& deviceExtensions )
 {
     uint32_t deviceCount = 0;
+
+    auto devices =
+        AppState::instance().getInstance().enumeratePhysicalDevices();
+
     vkEnumeratePhysicalDevices( AppState::instance().getInstance(),
                                 &deviceCount, nullptr );
 
-    assert( deviceCount != 0 );
-
-    std::vector<VkPhysicalDevice> devices( deviceCount );
-    vkEnumeratePhysicalDevices( AppState::instance().getInstance(),
-                                &deviceCount, devices.data() );
+    assert( !devices.empty() );
 
     // pick the first GPU in the system
     m_physicalDevice = devices[0];
@@ -43,12 +38,8 @@ void Device::create( const std::vector<const char*>& deviceExtensions )
 
     // get the queue families
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties( m_physicalDevice,
-                                              &queueFamilyCount, nullptr );
 
-    std::vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        m_physicalDevice, &queueFamilyCount, queueFamilies.data() );
+    auto queueFamilies = m_physicalDevice.getQueueFamilyProperties();
 
     // ensure one queue has graphics bit
     int graphicsFamilyIndex = -1;
@@ -56,7 +47,7 @@ void Device::create( const std::vector<const char*>& deviceExtensions )
     int i = 0;
     for ( const auto& family : queueFamilies )
     {
-        if ( family.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+        if ( family.queueFlags & vk::QueueFlagBits::eGraphics )
             graphicsFamilyIndex = i++;
     }
 
@@ -87,20 +78,14 @@ void Device::create( const std::vector<const char*>& deviceExtensions )
     */
 
     //Request for 1 queue from the graphics queue family
-    VkDeviceQueueCreateInfo queueCreateInfo{};
+
     float priority = 1.0f;
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = graphicsFamilyIndex;
-    queueCreateInfo.queueCount = 1;
-    queueCreateInfo.pQueuePriorities = &priority;
+    auto queueCreateInfo = vk::DeviceQueueCreateInfo(
+        vk::DeviceQueueCreateFlags(),
+        static_cast<uint32_t>( graphicsFamilyIndex ), 1, &priority );
 
-    VkPhysicalDeviceFeatures deviceFeatures{};
-
-    VkDeviceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.pQueueCreateInfos = &queueCreateInfo;
-    createInfo.queueCreateInfoCount = 1;
-    createInfo.pEnabledFeatures = &deviceFeatures;
+    auto createInfo =
+        vk::DeviceCreateInfo( vk::DeviceCreateFlags(), 1, &queueCreateInfo );
 
     // enable swapchain
     createInfo.enabledExtensionCount =
@@ -108,22 +93,22 @@ void Device::create( const std::vector<const char*>& deviceExtensions )
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
     // assuming the graphics queue also has presentation support
-    VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, graphicsFamilyIndex,
-                                          AppState::instance().getSurface(),
-                                          &presentSupport );
+    bool presentSupport = m_physicalDevice.getSurfaceSupportKHR(
+        graphicsFamilyIndex, AppState::instance().getSurface() );
     assert( presentSupport );
 
-    VkResult result = vkCreateDevice( m_physicalDevice, &createInfo, nullptr,
-                                      &m_logicalDevice );
+    try
+    {
+        m_logicalDevice = m_physicalDevice.createDeviceUnique( createInfo );
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to create logical device!" );
+    }
 
-    checkSuccess( result );
+    m_graphicsQueue = m_logicalDevice->getQueue( graphicsFamilyIndex, 0 );
 
-    vkGetDeviceQueue( m_logicalDevice, graphicsFamilyIndex, 0,
-                      &m_graphicsQueue );
-
-    VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties( m_physicalDevice, &properties );
+    auto properties = m_physicalDevice.getProperties();
 
     printf( "\nSelected Physical Device\n" );
     printf( "\nName:\n" );
@@ -137,12 +122,14 @@ void Device::create( const std::vector<const char*>& deviceExtensions )
                 std::to_string( family.queueCount ).c_str() );
         printf(
             "\tQueue flags: %s%s%s%s%s \n",
-            family.queueFlags & VK_QUEUE_GRAPHICS_BIT ? "Graphics " : "",
-            family.queueFlags & VK_QUEUE_COMPUTE_BIT ? "Compute " : "",
-            family.queueFlags & VK_QUEUE_TRANSFER_BIT ? "Transfer " : "",
-            family.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT ? "SparseBinding "
-                                                            : "",
-            family.queueFlags & VK_QUEUE_PROTECTED_BIT ? "Protected " : "" );
+            family.queueFlags & vk::QueueFlagBits::eGraphics ? "Graphics " : "",
+            family.queueFlags & vk::QueueFlagBits::eCompute ? "Compute " : "",
+            family.queueFlags & vk::QueueFlagBits::eTransfer ? "Transfer " : "",
+            family.queueFlags & vk::QueueFlagBits::eSparseBinding
+                ? "SparseBinding "
+                : "",
+            family.queueFlags & vk::QueueFlagBits::eProtected ? "Protected "
+                                                              : "" );
 
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, famCounter++,
@@ -156,34 +143,4 @@ void Device::create( const std::vector<const char*>& deviceExtensions )
         printf( "\t%s\n", extension );
     printf( "\nGot Device queue from family with index: %d\n",
             graphicsFamilyIndex );
-}
-
-void Device::destroy()
-{
-    vkDestroyDevice( m_logicalDevice, nullptr );
-    m_logicalDevice = VK_NULL_HANDLE;
-}
-
-VkPhysicalDevice Device::getPhysicaDevice()
-{
-    assert( m_physicalDevice != VK_NULL_HANDLE );
-    return m_physicalDevice;
-}
-
-VkDevice Device::getLogicalDevice()
-{
-    assert( m_logicalDevice != VK_NULL_HANDLE );
-    return m_logicalDevice;
-}
-
-int Device::getFamilyIndex()
-{
-    assert( m_physicalDevice != VK_NULL_HANDLE );
-    return m_index;
-}
-
-VkQueue Device::getGraphicsQueue()
-{
-    assert( m_graphicsQueue != VK_NULL_HANDLE );
-    return m_graphicsQueue;
 }

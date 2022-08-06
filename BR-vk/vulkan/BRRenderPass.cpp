@@ -12,7 +12,7 @@ RenderPass::RenderPass() : m_renderPass( VK_NULL_HANDLE )
 
 RenderPass::~RenderPass()
 {
-    assert( m_renderPass == VK_NULL_HANDLE );
+    assert( !m_renderPass );
 }
 
 void RenderPass::create()
@@ -44,66 +44,70 @@ void RenderPass::create()
     * 
     */
 
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = AppState::instance().getSwapchainFormat();
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    auto format = AppState::instance().getSwapchainFormat();
+    m_device = AppState::instance().getLogicalDevice();
 
-    VkAttachmentReference colorAttachmentRef{};
+    auto colorAttachment = vk::AttachmentDescription();
+    colorAttachment.format = format;
+    colorAttachment.samples = vk::SampleCountFlagBits::e1;
+    colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+    colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+    colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
+    colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+
+    vk::AttachmentReference colorAttachmentRef = {};
     colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    vk::SubpassDescription subpass = {};
+    subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
 
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
+    vk::SubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    //dependency.srcAccessMask = 0;
+    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
+                               vk::AccessFlagBits::eColorAttachmentWrite;
 
     /*
     * The dependancy ensures the image is written into only after it's been read from
     * This allows us to run part of the pipeline while the frame is still being presented
     */
 
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    vk::RenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    VkResult result =
-        vkCreateRenderPass( AppState::instance().getLogicalDevice(),
-                            &renderPassInfo, nullptr, &m_renderPass );
-
-    checkSuccess( result );
+    try
+    {
+        m_renderPass = m_device.createRenderPass( renderPassInfo );
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to create render pass!" );
+    }
 
     printf( "\nCreated Render Pass\n" );
 }
 
 void RenderPass::destroy()
 {
-    vkDestroyRenderPass( AppState::instance().getLogicalDevice(), m_renderPass,
-                         nullptr );
-
-    m_renderPass = VK_NULL_HANDLE;
+    m_device.destroyRenderPass( m_renderPass );
+    m_renderPass = nullptr;
 }
 
-VkRenderPass RenderPass::get()
+vk::RenderPass RenderPass::get()
 {
-    assert( m_renderPass != VK_NULL_HANDLE );
+    assert( m_renderPass );
     return m_renderPass;
 }

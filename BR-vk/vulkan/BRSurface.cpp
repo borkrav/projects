@@ -30,9 +30,3 @@ void Surface::destroy()
                          nullptr );
     m_surface = VK_NULL_HANDLE;
 }
-
-VkSurfaceKHR Surface::get()
-{
-    assert( m_surface != VK_NULL_HANDLE );
-    return m_surface;
-}

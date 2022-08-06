@@ -15,9 +15,10 @@ class RenderPass
 
     void create();
     void destroy();
-    VkRenderPass get();
+    vk::RenderPass get();
 
    private:
-    VkRenderPass m_renderPass;
+    vk::RenderPass m_renderPass;
+    vk::Device m_device;
 };
 }  // namespace BR

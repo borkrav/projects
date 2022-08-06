@@ -13,10 +13,11 @@ class CommandPool
     ~CommandPool();
 
     void create();
-    VkCommandBuffer createBuffer();
+    vk::CommandBuffer createBuffer();
     void destroy();
 
    private:
-    VkCommandPool m_commandPool;
+    vk::CommandPool m_commandPool;
+    vk::Device m_device;
 };
 }  // namespace BR

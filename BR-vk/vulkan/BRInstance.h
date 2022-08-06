@@ -1,13 +1,15 @@
 #pragma once
 
 #include <vector>
-#include <vulkan/vulkan_handles.hpp>
+#include <vulkan/vulkan.hpp>
 
 namespace BR
 {
 class Instance
 {
     friend class AppState;
+
+    vk::UniqueInstance m_instance;
 
    private:
     Instance();
@@ -16,9 +18,7 @@ class Instance
     void create( bool enableValidationLayers );
     void createDebugMessenger();
     void destroy();
-    VkInstance get();
 
-    VkInstance m_instance;
     VkDebugUtilsMessengerEXT m_debugMessenger;
     bool m_enableValidationLayers;
 };

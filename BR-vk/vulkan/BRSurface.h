@@ -16,7 +16,6 @@ class Surface
 
     void create( GLFWwindow* m_window );
     void destroy();
-    VkSurfaceKHR get();
 
     VkSurfaceKHR m_surface;
 };

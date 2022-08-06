@@ -1,7 +1,7 @@
+#include <BRRender.h>
+
 #include <cstdlib>
 #include <stdexcept>
-
-#include <BRRender.h>
 
 int main()
 {

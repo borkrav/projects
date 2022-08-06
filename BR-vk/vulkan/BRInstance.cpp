@@ -9,28 +9,26 @@ const std::vector<const char*> validationLayers = {
 
 bool checkValidationLayerSupport()
 {
-    uint32_t layerCount = 0;
-    vkEnumerateInstanceLayerProperties( &layerCount, nullptr );
-    std::vector<VkLayerProperties> availableLayers( layerCount );
-    vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
+    auto layers = vk::enumerateInstanceLayerProperties();
 
     for ( const char* layerName : validationLayers )
     {
         bool layerFound = false;
 
-        for ( const auto& layerProperties : availableLayers )
+        for ( const auto& layerProperties : layers )
         {
-            if ( std::string( layerName ) ==
-                 std::string( layerProperties.layerName ) )
+            if ( strcmp( layerName, layerProperties.layerName ) == 0 )
             {
                 layerFound = true;
                 break;
             }
         }
-        if ( !layerFound )
-            return false;
-    }
 
+        if ( !layerFound )
+        {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -76,16 +74,16 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 }
 
 void populateDebugMessengerCreateInfo(
-    VkDebugUtilsMessengerCreateInfoEXT& createInfo )
+    vk::DebugUtilsMessengerCreateInfoEXT& createInfo )
 {
-    createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     createInfo.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning;
+
+    createInfo.messageType =
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
     createInfo.pfnUserCallback = debugCallback;
 }
 
@@ -103,13 +101,13 @@ void DestroyDebugUtilsMessengerEXT( VkInstance instance,
 
 
 
-Instance::Instance() : m_instance( VK_NULL_HANDLE ), m_enableValidationLayers( false )
+Instance::Instance() : m_instance( nullptr ), m_enableValidationLayers( false )
 {
 }
 
 Instance::~Instance()
 {
-    assert( m_instance == VK_NULL_HANDLE );
+   
 }
 
 void Instance::create( bool enableValidationLayers )
@@ -125,13 +123,10 @@ void Instance::create( bool enableValidationLayers )
         applications/engines In older APIs, drivers would use huertics to detect
         the application, this is cleaner.
     */
-    VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Hello Triangle";
-    appInfo.applicationVersion = VK_MAKE_VERSION( 1, 0, 0 );
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION( 1, 0, 0 );
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+
+    auto appInfo = vk::ApplicationInfo(
+        "Hello Triangle", VK_MAKE_VERSION( 1, 0, 0 ), "No Engine",
+        VK_MAKE_VERSION( 1, 0, 0 ), VK_API_VERSION_1_0 );
 
     /*
     * Structure for creation of vulkan instance, specifies layers and extensions
@@ -147,10 +142,9 @@ void Instance::create( bool enableValidationLayers )
         features that are needed 
     */
 
-    VkInstanceCreateInfo createInfo{};
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    vk::InstanceCreateInfo createInfo;
+    vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
 
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
     if ( m_enableValidationLayers )
@@ -166,7 +160,7 @@ void Instance::create( bool enableValidationLayers )
 
         populateDebugMessengerCreateInfo( debugCreateInfo );
         createInfo.pNext =
-            (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+            (vk::DebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
     }
     else
     {
@@ -188,9 +182,14 @@ void Instance::create( bool enableValidationLayers )
     * The application is linked against vulkan-1.dll, which is the loader
     */
 
-    VkResult result = vkCreateInstance( &createInfo, nullptr, &m_instance );
-
-    checkSuccess( result );
+    try
+    {
+        m_instance = vk::createInstanceUnique( createInfo, nullptr );
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to create instance!" );
+    }
 
     printf( "\nCreated Vulkan instance\n" );
     printf( "\nLayers:\n" );
@@ -213,11 +212,11 @@ void Instance::createDebugMessenger()
     if ( !m_enableValidationLayers )
         return;
 
-    VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+    vk::DebugUtilsMessengerCreateInfoEXT createInfo;
     populateDebugMessengerCreateInfo( createInfo );
 
-    VkResult result = CreateDebugUtilsMessengerEXT(
-        m_instance, &createInfo, nullptr, &m_debugMessenger );
+    auto result = CreateDebugUtilsMessengerEXT(
+        *m_instance, reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(&createInfo), nullptr, &m_debugMessenger );
 
     checkSuccess( result );
 }
@@ -225,14 +224,7 @@ void Instance::createDebugMessenger()
 void Instance::destroy()
 {
     if ( m_enableValidationLayers )
-        DestroyDebugUtilsMessengerEXT( m_instance, m_debugMessenger, nullptr );
+        DestroyDebugUtilsMessengerEXT( *m_instance, m_debugMessenger, nullptr );
 
-    vkDestroyInstance( m_instance, nullptr );
-    m_instance = VK_NULL_HANDLE;
 }
 
-VkInstance Instance::get()
-{
-    assert( m_instance != VK_NULL_HANDLE );
-    return m_instance;
-}

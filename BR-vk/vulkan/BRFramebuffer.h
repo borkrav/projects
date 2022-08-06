@@ -1,12 +1,11 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
-#include <vector>
-
 #include <BRDevice.h>
 #include <BRRenderPass.h>
 #include <BRSwapchain.h>
+
+#include <vector>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
@@ -17,10 +16,11 @@ class Framebuffer
     ~Framebuffer();
 
     void create( RenderPass& renderpass );
-    void destroy( );
-    std::vector<VkFramebuffer>& get();
+    void destroy();
+    std::vector<vk::Framebuffer>& get();
 
    private:
-    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+    std::vector<vk::Framebuffer> m_swapChainFramebuffers;
+    vk::Device m_device;
 };
 }  // namespace BR

@@ -6,13 +6,13 @@
 
 using namespace BR;
 
-CommandPool::CommandPool() : m_commandPool( VK_NULL_HANDLE )
+CommandPool::CommandPool() : m_commandPool( nullptr )
 {
 }
 
 CommandPool::~CommandPool()
 {
-    assert( m_commandPool == VK_NULL_HANDLE );
+    assert( !m_commandPool );
 }
 
 void CommandPool::create()
@@ -21,50 +21,49 @@ void CommandPool::create()
     * Command pools allow concurrent recording of command buffers
     * One pool per thread -> Multi-thread recording
     */
+    m_device = AppState::instance().getLogicalDevice();
+    auto familyIndex = AppState::instance().getFamilyIndex();
 
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = AppState::instance().getFamilyIndex();
+    auto poolInfo = vk::CommandPoolCreateInfo(
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer, familyIndex );
 
-    VkResult result =
-        vkCreateCommandPool( AppState::instance().getLogicalDevice(), &poolInfo,
-                             nullptr, &m_commandPool );
-
-    checkSuccess( result );
+    try
+    {
+        m_commandPool = m_device.createCommandPool( poolInfo );
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to create command pool!" );
+    }
 
     printf( "\nCreated Command Pool\n" );
 }
 
-VkCommandBuffer CommandPool::createBuffer()
+vk::CommandBuffer CommandPool::createBuffer()
 {
     /*
     * Record work commands into this
     * Submit this to the queue for the GPU to work on
     */
 
-    VkCommandBuffer buff;
+    auto allocInfo = vk::CommandBufferAllocateInfo(
+        m_commandPool, vk::CommandBufferLevel::ePrimary, 1 );
 
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = m_commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-
-    VkResult result = vkAllocateCommandBuffers(
-        AppState::instance().getLogicalDevice(), &allocInfo, &buff );
-
-    checkSuccess( result );
+    try
+    {
+        auto result = m_device.allocateCommandBuffers( allocInfo );
+        return result[0];
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to allocate command buffers!" );
+    }
 
     printf( "\nCreated Command Buffer\n" );
-
-    return buff;
 }
 
 void CommandPool::destroy()
 {
-    vkDestroyCommandPool( AppState::instance().getLogicalDevice(),
-                          m_commandPool, nullptr );
-
-    m_commandPool = VK_NULL_HANDLE;
+    m_device.destroyCommandPool( m_commandPool );
+    m_commandPool = nullptr;
 }

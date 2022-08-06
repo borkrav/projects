@@ -36,19 +36,19 @@ class AppState
 
     void recreateSwapchain();
 
-    VkInstance getInstance();
+    vk::Instance getInstance();
 
-    VkPhysicalDevice getPhysicalDevice();
-    VkDevice getLogicalDevice();
-    VkQueue getGraphicsQueue();
+    vk::PhysicalDevice getPhysicalDevice();
+    vk::Device getLogicalDevice();
+    vk::Queue getGraphicsQueue();
     int getFamilyIndex();
 
-    VkSurfaceKHR getSurface();
+    vk::SurfaceKHR getSurface();
 
-    VkSwapchainKHR getSwapchain();
-    VkFormat getSwapchainFormat();
-    VkExtent2D& getSwapchainExtent();
-    std::vector<VkImageView>& getImageViews();
+    vk::SwapchainKHR getSwapchain();
+    vk::Format getSwapchainFormat();
+    vk::Extent2D& getSwapchainExtent();
+    std::vector<vk::ImageView>& getImageViews();
 
    private:
     AppState();

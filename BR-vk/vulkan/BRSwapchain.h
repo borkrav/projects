@@ -14,19 +14,15 @@ class Swapchain
     Swapchain();
     ~Swapchain();
 
-    void create( GLFWwindow* window, Surface& surface );
+    void create( GLFWwindow* window );
     void createImageViews();
     void destroy();
 
-    VkSwapchainKHR get();
-    VkFormat getFormat();
-    VkExtent2D& getExtent();
-    std::vector<VkImageView>& getImageViews();
-
-    VkSwapchainKHR m_swapChain;
-    std::vector<VkImage> m_swapChainImages;
-    VkFormat m_swapChainFormat;
-    VkExtent2D m_swapChainExtent;
-    std::vector<VkImageView> m_swapChainImageViews;
+    vk::SwapchainKHR m_swapChain;
+    std::vector<vk::Image> m_swapChainImages;
+    vk::Format m_swapChainFormat;
+    vk::Extent2D m_swapChainExtent;
+    std::vector<vk::ImageView> m_swapChainImageViews;
+    vk::Device m_device;
 };
 }  // namespace BR

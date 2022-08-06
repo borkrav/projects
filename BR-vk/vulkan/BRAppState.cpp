@@ -13,7 +13,6 @@ AppState::~AppState()
     assert( created );
 
     m_swapchain.destroy();
-    m_device.destroy();
     m_surface.destroy();
     m_instance.destroy();
 }
@@ -34,7 +33,7 @@ void AppState::init( GLFWwindow* window )
         VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
     m_device.create( deviceExtensions );
-    m_swapchain.create( window, m_surface );
+    m_swapchain.create( window );
     m_swapchain.createImageViews();
 }
 
@@ -44,66 +43,66 @@ void AppState::recreateSwapchain()
     m_swapchain.destroy();
 
     //create new swapchain
-    m_swapchain.create( m_window, m_surface );
+    m_swapchain.create( m_window );
     m_swapchain.createImageViews();
 }
 
-VkInstance AppState::getInstance()
+vk::Instance AppState::getInstance()
 {
     assert( created );
-    return m_instance.get();
+    return m_instance.m_instance.get();
 }
 
-VkPhysicalDevice AppState::getPhysicalDevice()
+vk::PhysicalDevice AppState::getPhysicalDevice()
 {
     assert( created );
-    return m_device.getPhysicaDevice();
+    return m_device.m_physicalDevice;
 }
 
-VkDevice AppState::getLogicalDevice()
+vk::Device AppState::getLogicalDevice()
 {
     assert( created );
-    return m_device.getLogicalDevice();
+    return m_device.m_logicalDevice.get();
 }
 
-VkQueue AppState::getGraphicsQueue()
+vk::Queue AppState::getGraphicsQueue()
 {
     assert( created );
-    return m_device.getGraphicsQueue();
+    return m_device.m_graphicsQueue;
 }
 
 int AppState::getFamilyIndex()
 {
     assert( created );
-    return m_device.getFamilyIndex();
+    return m_device.m_index;
 }
 
-VkSurfaceKHR AppState::getSurface()
+vk::SurfaceKHR AppState::getSurface()
 {
     assert( created );
-    return m_surface.get();
+    return m_surface.m_surface;
 }
 
-VkSwapchainKHR AppState::getSwapchain()
+vk::SwapchainKHR AppState::getSwapchain()
 {
     assert( created );
-    return m_swapchain.get();
+    return m_swapchain.m_swapChain;
 }
 
-VkFormat AppState::getSwapchainFormat()
+vk::Format AppState::getSwapchainFormat()
 {
     assert( created );
-    return m_swapchain.getFormat();
+    return m_swapchain.m_swapChainFormat;
 }
 
-VkExtent2D& AppState::getSwapchainExtent()
+vk::Extent2D& AppState::getSwapchainExtent()
 {
     assert( created );
-    return m_swapchain.getExtent();
+    return m_swapchain.m_swapChainExtent;
 }
 
-std::vector<VkImageView>& AppState::getImageViews()
+std::vector<vk::ImageView>& AppState::getImageViews()
 {
     assert( created );
-    return m_swapchain.getImageViews();
+    return m_swapchain.m_swapChainImageViews;
 }

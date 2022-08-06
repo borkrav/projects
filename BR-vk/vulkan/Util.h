@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#define CHECK_SUCCESS( result ) checkSuccess( result )
+
 static std::vector<char> readFile( const std::string& filename )
 {
     std::ifstream file( filename, std::ios::ate | std::ios::binary );
@@ -23,4 +25,9 @@ static std::vector<char> readFile( const std::string& filename )
 static void checkSuccess( VkResult result )
 {
     assert( result == VK_SUCCESS );
+}
+
+static void checkSuccess( vk::Result result )
+{
+    assert( (VkResult)result == VK_SUCCESS );
 }
