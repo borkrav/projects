@@ -35,7 +35,7 @@ Pipeline::~Pipeline()
     assert( !m_graphicsPipeline && !m_pipelineLayout );
 }
 
-void Pipeline::create( RenderPass& renderpass )
+void Pipeline::create( RenderPass& renderpass, std::string name )
 {
     /*
     * Here we have a bunch of objects that define pipleline stages
@@ -147,6 +147,8 @@ void Pipeline::create( RenderPass& renderpass )
         throw std::runtime_error( "failed to create pipeline layout!" );
     }
 
+    DEBUG_NAME( m_pipelineLayout, name + "layout" );
+
     vk::GraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.stageCount = 2;
     pipelineInfo.pStages = shaderStages;
@@ -170,6 +172,8 @@ void Pipeline::create( RenderPass& renderpass )
     {
         throw std::runtime_error( "failed to create graphics pipeline!" );
     }
+
+    DEBUG_NAME( m_graphicsPipeline, name )
 }
 
 void Pipeline::destroy()

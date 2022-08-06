@@ -9,6 +9,12 @@ const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
+
 using namespace BR;
 
 void BRRender::run()
@@ -40,21 +46,25 @@ void BRRender::initWindow()
 
 void BRRender::initVulkan()
 {
-    AppState::instance().init( m_window );
+    AppState::instance().init( m_window, enableValidationLayers );
 
     m_device = AppState::instance().getLogicalDevice();
 
-    m_renderPass.create();
-    m_pipeline.create( m_renderPass );
-    m_framebuffer.create( m_renderPass );
-    m_commandPool.create();
+    m_renderPass.create( "Raster Renderpass" );
+    m_pipeline.create( m_renderPass, "Raster Pipeline" );
+    m_framebuffer.create( m_renderPass, "Swapchain Frame buffer" );
+    m_commandPool.create( "Drawing pool" );
 
     for ( int i : std::views::iota( 0, MAX_FRAMES_IN_FLIGHT ) )
     {
-        m_commandBuffers.emplace_back( m_commandPool.createBuffer() );
-        m_imageAvailableSemaphores.emplace_back( m_syncMgr.createSemaphore() );
-        m_renderFinishedSemaphores.emplace_back( m_syncMgr.createSemaphore() );
-        m_inFlightFences.emplace_back( m_syncMgr.createFence() );
+        m_commandBuffers.emplace_back(
+            m_commandPool.createBuffer( "Buffer for frame " + i ) );
+        m_imageAvailableSemaphores.emplace_back( m_syncMgr.createSemaphore(
+            "Image Avail Semaphore for frame " + i ) );
+        m_renderFinishedSemaphores.emplace_back( m_syncMgr.createSemaphore(
+            "Render Finish Semaphore for frame " + i ) );
+        m_inFlightFences.emplace_back(
+            m_syncMgr.createFence( "In Flight Fence for frame " + i ) );
     }
 
     m_vertexBuffer = m_vboMgr.createBuffer( m_vertices );
@@ -75,7 +85,7 @@ void BRRender::recreateSwapchain()
 
     m_framebuffer.destroy();
     AppState::instance().recreateSwapchain();
-    m_framebuffer.create( m_renderPass );
+    m_framebuffer.create( m_renderPass, "Swapchain Frame buffer" );
 }
 
 void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,

@@ -1,4 +1,6 @@
 
+#include <BRAppState.h>
+
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -6,6 +8,13 @@
 #include <vector>
 
 #define CHECK_SUCCESS( result ) checkSuccess( result )
+
+#ifdef NDEBUG
+#define DEBUG_NAME( object, name )
+#else
+#define DEBUG_NAME( object, name ) \
+    AppState::instance().getDebug().setName( object, name );
+#endif
 
 static std::vector<char> readFile( const std::string& filename )
 {

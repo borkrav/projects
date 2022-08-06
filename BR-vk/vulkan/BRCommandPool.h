@@ -12,8 +12,8 @@ class CommandPool
     CommandPool();
     ~CommandPool();
 
-    void create();
-    vk::CommandBuffer createBuffer();
+    void create( std::string name );
+    vk::CommandBuffer createBuffer( std::string name );
     void destroy();
 
    private:

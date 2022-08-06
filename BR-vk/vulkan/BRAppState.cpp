@@ -17,7 +17,7 @@ AppState::~AppState()
     m_instance.destroy();
 }
 
-void AppState::init( GLFWwindow* window )
+void AppState::init( GLFWwindow* window, bool debug )
 {
     if ( created )
         return;
@@ -26,15 +26,21 @@ void AppState::init( GLFWwindow* window )
 
     m_window = window;
 
-    m_instance.create( true );
+    m_instance.create( debug );
     m_surface.create( window );
 
     const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-    m_device.create( deviceExtensions );
-    m_swapchain.create( window );
-    m_swapchain.createImageViews();
+    m_device.create( deviceExtensions, "GPU" );
+
+#ifdef NDEBUG
+#else
+    m_debug.create( " RTX 3080 " );
+#endif
+
+    m_swapchain.create( window, "Swapchain" );
+    m_swapchain.createImageViews( "Swapchain image view " );
 }
 
 void AppState::recreateSwapchain()
@@ -43,8 +49,8 @@ void AppState::recreateSwapchain()
     m_swapchain.destroy();
 
     //create new swapchain
-    m_swapchain.create( m_window );
-    m_swapchain.createImageViews();
+    m_swapchain.create( m_window, "Swapchain" );
+    m_swapchain.createImageViews( "Swapchain image view " );
 }
 
 vk::Instance AppState::getInstance()
@@ -106,3 +112,11 @@ std::vector<vk::ImageView>& AppState::getImageViews()
     assert( created );
     return m_swapchain.m_swapChainImageViews;
 }
+
+#ifdef NDEBUG
+#else
+BR::Debug AppState::getDebug()
+{
+    return m_debug;
+}
+#endif

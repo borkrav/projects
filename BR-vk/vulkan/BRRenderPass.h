@@ -13,7 +13,7 @@ class RenderPass
     RenderPass();
     ~RenderPass();
 
-    void create();
+    void create( std::string name );
     void destroy();
     vk::RenderPass get();
 

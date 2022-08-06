@@ -1,5 +1,6 @@
 #pragma once
 
+#include <BRDebug.h>
 #include <BRDevice.h>
 #include <BRInstance.h>
 #include <BRSurface.h>
@@ -32,7 +33,7 @@ class AppState
     AppState( AppState const& ) = delete;
     void operator=( AppState const& ) = delete;
 
-    void init( GLFWwindow* window );
+    void init( GLFWwindow* window, bool debug );
 
     void recreateSwapchain();
 
@@ -42,13 +43,16 @@ class AppState
     vk::Device getLogicalDevice();
     vk::Queue getGraphicsQueue();
     int getFamilyIndex();
-
     vk::SurfaceKHR getSurface();
-
     vk::SwapchainKHR getSwapchain();
     vk::Format getSwapchainFormat();
     vk::Extent2D& getSwapchainExtent();
     std::vector<vk::ImageView>& getImageViews();
+
+#ifdef NDEBUG
+#else
+    BR::Debug getDebug();
+#endif
 
    private:
     AppState();
@@ -62,5 +66,10 @@ class AppState
     BR::Device m_device;
     BR::Surface m_surface;
     BR::Swapchain m_swapchain;
+
+#ifdef NDEBUG
+#else
+    BR::Debug m_debug;
+#endif
 };
 }  // namespace BR

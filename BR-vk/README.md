@@ -11,12 +11,17 @@ Vulkan Renderer
 - Learn some rendering methods - lighting, shading, etc
 
 
-1. Split current tutorial code into distinct classes for readability/understandability. Going to get it to work on my own hardware, not going to care about the general case
-2. Add Dear ImGui, follow tutorial, understand how this works
-3. Read .OBJ file, create buffers, similar to Nvidia Tutorial, draw the cube, try other scenes
-4. Start learning about lighting/shading
-5. Add in screenshot from other tutorial
-6. Add in ray tracing
-7. Add accumulation buffer, from other tutorial
+1. Split current tutorial code into distinct classes for readability/understandability. Going to get it to work on my own hardware, not going to care about the general case - DONE
+2. Write a debug annotation utility - DONE
+    - write a simple GPU memory manager
+    - write an image creator
+    - write a pipeline generator
+
+3. Add Dear ImGui, follow tutorial, understand how this works
+4. Read .OBJ file, create buffers, similar to Nvidia Tutorial, draw the cube, try other scenes
+5. Start learning about lighting/shading
+6. Add in screenshot from other tutorial
+7. Add in ray tracing
+8. Add accumulation buffer, from other tutorial
 
 

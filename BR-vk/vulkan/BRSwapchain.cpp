@@ -15,7 +15,7 @@ Swapchain::~Swapchain()
     assert( !m_swapChain && m_swapChainImageViews.empty() );
 }
 
-void Swapchain::create( GLFWwindow* window )
+void Swapchain::create( GLFWwindow* window, std::string name )
 {
     auto surfaceFormat = vk::SurfaceFormatKHR(
         vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear );
@@ -78,6 +78,8 @@ void Swapchain::create( GLFWwindow* window )
         throw std::runtime_error( "failed to create swap chain!" );
     }
 
+    DEBUG_NAME( m_swapChain, name );
+
     m_swapChainImages = m_device.getSwapchainImagesKHR( m_swapChain );
 
     printf( "\nCreated Swap Chain\n" );
@@ -88,7 +90,7 @@ void Swapchain::create( GLFWwindow* window )
     printf( "\tImage Count: %d\n", imageCount );
 }
 
-void Swapchain::createImageViews()
+void Swapchain::createImageViews( std::string name )
 {
     /*
     Create image views into the swap chain images
@@ -120,12 +122,16 @@ void Swapchain::createImageViews()
         try
         {
             m_swapChainImageViews[i] = m_device.createImageView( createInfo );
+
+            std::string debugname = name + std::to_string( i );
+
+            DEBUG_NAME( m_swapChainImageViews[i], debugname )
         }
         catch ( vk::SystemError err )
         {
             throw std::runtime_error( "failed to create image views!" );
         }
-        }
+    }
     printf( "\nCreated %d Image Views: %s\n",
             static_cast<int>( m_swapChainImages.size() ),
             "VK_IMAGE_VIEW_TYPE_2D" );

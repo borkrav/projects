@@ -15,7 +15,7 @@ RenderPass::~RenderPass()
     assert( !m_renderPass );
 }
 
-void RenderPass::create()
+void RenderPass::create( std::string name )
 {
     /*
     * We're giving Vulkan a "map" for how we plan to use 
@@ -96,6 +96,8 @@ void RenderPass::create()
     {
         throw std::runtime_error( "failed to create render pass!" );
     }
+
+    DEBUG_NAME( m_renderPass, name );
 
     printf( "\nCreated Render Pass\n" );
 }

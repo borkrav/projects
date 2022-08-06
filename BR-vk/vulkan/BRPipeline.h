@@ -16,7 +16,7 @@ class Pipeline
     Pipeline();
     ~Pipeline();
 
-    void create( RenderPass& renderpass );
+    void create( RenderPass& renderpass, std::string name );
     void destroy();
     vk::Pipeline get();
 

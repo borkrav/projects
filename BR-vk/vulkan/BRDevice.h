@@ -14,7 +14,8 @@ class Device
    private:
     Device();
 
-    void create( const std::vector<const char*>& deviceExtensions );
+    void create( const std::vector<const char*>& deviceExtensions,
+                 std::string name );
 
     vk::PhysicalDevice m_physicalDevice;
     vk::UniqueDevice m_logicalDevice;

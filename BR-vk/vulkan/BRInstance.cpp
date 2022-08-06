@@ -1,5 +1,4 @@
 #include <BRInstance.h>
-
 #include <Util.h>
 
 using namespace BR;
@@ -69,7 +68,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-    printf( "validation layer: %s\n", pCallbackData->pMessage );
+    printf( "\n --> validation layer: %s\n", pCallbackData->pMessage );
     return VK_FALSE;
 }
 
@@ -80,10 +79,9 @@ void populateDebugMessengerCreateInfo(
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning;
 
-    createInfo.messageType =
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+    createInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                             vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                             vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
     createInfo.pfnUserCallback = debugCallback;
 }
 
@@ -99,15 +97,12 @@ void DestroyDebugUtilsMessengerEXT( VkInstance instance,
     }
 }
 
-
-
 Instance::Instance() : m_instance( nullptr ), m_enableValidationLayers( false )
 {
 }
 
 Instance::~Instance()
 {
-   
 }
 
 void Instance::create( bool enableValidationLayers )
@@ -216,7 +211,10 @@ void Instance::createDebugMessenger()
     populateDebugMessengerCreateInfo( createInfo );
 
     auto result = CreateDebugUtilsMessengerEXT(
-        *m_instance, reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(&createInfo), nullptr, &m_debugMessenger );
+        *m_instance,
+        reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(
+            &createInfo ),
+        nullptr, &m_debugMessenger );
 
     checkSuccess( result );
 }
@@ -225,6 +223,4 @@ void Instance::destroy()
 {
     if ( m_enableValidationLayers )
         DestroyDebugUtilsMessengerEXT( *m_instance, m_debugMessenger, nullptr );
-
 }
-

@@ -15,7 +15,7 @@ SyncMgr::~SyncMgr()
     assert( m_fences.empty() && m_semaphores.empty() );
 }
 
-vk::Semaphore SyncMgr::createSemaphore()
+vk::Semaphore SyncMgr::createSemaphore( std::string name )
 {
     if ( !m_device )
         m_device = AppState::instance().getLogicalDevice();
@@ -25,6 +25,7 @@ vk::Semaphore SyncMgr::createSemaphore()
     try
     {
         vk::Semaphore sem = m_device.createSemaphore( info );
+        DEBUG_NAME( sem, name );
         return sem;
     }
     catch ( vk::SystemError err )
@@ -34,7 +35,7 @@ vk::Semaphore SyncMgr::createSemaphore()
     }
 }
 
-vk::Fence SyncMgr::createFence()
+vk::Fence SyncMgr::createFence( std::string name )
 {
     if ( !m_device )
         m_device = AppState::instance().getLogicalDevice();
@@ -44,6 +45,7 @@ vk::Fence SyncMgr::createFence()
     try
     {
         vk::Fence fence = m_device.createFence( info );
+        DEBUG_NAME( fence, name );
         return fence;
     }
     catch ( vk::SystemError err )

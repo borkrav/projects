@@ -14,8 +14,8 @@ class Swapchain
     Swapchain();
     ~Swapchain();
 
-    void create( GLFWwindow* window );
-    void createImageViews();
+    void create( GLFWwindow* window, std::string name );
+    void createImageViews( std::string name );
     void destroy();
 
     vk::SwapchainKHR m_swapChain;
