@@ -1,26 +1,27 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
 #include <BRInstance.h>
 #include <BRSurface.h>
+
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
 class Device
 {
-   public:
+    friend class AppState;
+
+   private:
     Device();
     ~Device();
 
-    void create( Instance& instance, const std::vector<const char*>&deviceExtensions, Surface& surface);
+    void create( const std::vector<const char*>& deviceExtensions );
     void destroy();
     VkPhysicalDevice getPhysicaDevice();
     VkDevice getLogicalDevice();
     VkQueue getGraphicsQueue();
     int getFamilyIndex();
 
-   private:
     VkPhysicalDevice m_physicalDevice;
     VkDevice m_logicalDevice;
     VkQueue m_graphicsQueue;

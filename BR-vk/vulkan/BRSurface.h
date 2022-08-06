@@ -1,22 +1,23 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
 #include <BRInstance.h>
+
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
 class Surface
 {
-   public:
+    friend class AppState;
+
+   private:
     Surface();
     ~Surface();
 
-    void create( Instance &instance, GLFWwindow* m_window);
-    void destroy(Instance &instance);
+    void create( GLFWwindow* m_window );
+    void destroy();
     VkSurfaceKHR get();
 
-   private:
     VkSurfaceKHR m_surface;
 };
 }  // namespace BR

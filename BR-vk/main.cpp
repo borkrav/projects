@@ -1,11 +1,11 @@
 #include <cstdlib>
 #include <stdexcept>
 
-#include <VkRender.h>
+#include <BRRender.h>
 
 int main()
 {
-    VkRender app;
+    BR::BRRender app;
 
     try
     {

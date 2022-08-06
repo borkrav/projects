@@ -1,18 +1,17 @@
+#include <BRAppState.h>
 #include <BRVBOMgr.h>
+#include <Util.h>
 
 #include <cassert>
-
-#include <Util.h>
 
 using namespace BR;
 
 // Finds suitable memory for the vertex buffer
 uint32_t findMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties,
-                         Device& device )
+                         VkPhysicalDevice device )
 {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties( device.getPhysicaDevice(),
-                                         &memProperties );
+    vkGetPhysicalDeviceMemoryProperties( device, &memProperties );
 
     for ( uint32_t i = 0; i < memProperties.memoryTypeCount; i++ )
     {
@@ -39,7 +38,7 @@ VBOMgr::~VBOMgr()
             m_vertexBufferMemory == VK_NULL_HANDLE );
 }
 
-VkBuffer VBOMgr::createBuffer( const std::vector<Pipeline::Vertex>& m_vertices, Device& device )
+VkBuffer VBOMgr::createBuffer( const std::vector<Pipeline::Vertex>& m_vertices )
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -47,14 +46,14 @@ VkBuffer VBOMgr::createBuffer( const std::vector<Pipeline::Vertex>& m_vertices, 
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result = vkCreateBuffer( device.getLogicalDevice(), &bufferInfo,
-                                      nullptr, &m_vertexBuffer );
+    VkResult result = vkCreateBuffer( AppState::instance().getLogicalDevice(),
+                                      &bufferInfo, nullptr, &m_vertexBuffer );
 
     checkSuccess( result );
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements( device.getLogicalDevice(), m_vertexBuffer,
-                                   &memRequirements );
+    vkGetBufferMemoryRequirements( AppState::instance().getLogicalDevice(),
+                                   m_vertexBuffer, &memRequirements );
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -63,29 +62,32 @@ VkBuffer VBOMgr::createBuffer( const std::vector<Pipeline::Vertex>& m_vertices, 
         findMemoryType( memRequirements.memoryTypeBits,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                        device );
+                        AppState::instance().getPhysicalDevice() );
 
-    result = vkAllocateMemory( device.getLogicalDevice(), &allocInfo, nullptr,
-                               &m_vertexBufferMemory );
+    result = vkAllocateMemory( AppState::instance().getLogicalDevice(),
+                               &allocInfo, nullptr, &m_vertexBufferMemory );
 
-    vkBindBufferMemory( device.getLogicalDevice(), m_vertexBuffer,
+    vkBindBufferMemory( AppState::instance().getLogicalDevice(), m_vertexBuffer,
                         m_vertexBufferMemory, 0 );
 
     checkSuccess( result );
 
     void* data;
-    vkMapMemory( device.getLogicalDevice(), m_vertexBufferMemory, 0,
-                 bufferInfo.size, 0, &data );
+    vkMapMemory( AppState::instance().getLogicalDevice(), m_vertexBufferMemory,
+                 0, bufferInfo.size, 0, &data );
     memcpy( data, m_vertices.data(), (size_t)bufferInfo.size );
-    vkUnmapMemory( device.getLogicalDevice(), m_vertexBufferMemory );
+    vkUnmapMemory( AppState::instance().getLogicalDevice(),
+                   m_vertexBufferMemory );
 
     return m_vertexBuffer;
 }
 
-void VBOMgr::destroy( Device& device )
+void VBOMgr::destroy()
 {
-    vkDestroyBuffer( device.getLogicalDevice(), m_vertexBuffer, nullptr );
-    vkFreeMemory( device.getLogicalDevice(), m_vertexBufferMemory, nullptr );
+    vkDestroyBuffer( AppState::instance().getLogicalDevice(), m_vertexBuffer,
+                     nullptr );
+    vkFreeMemory( AppState::instance().getLogicalDevice(), m_vertexBufferMemory,
+                  nullptr );
 
     m_vertexBuffer = VK_NULL_HANDLE;
     m_vertexBufferMemory = VK_NULL_HANDLE;

@@ -1,23 +1,23 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
 #include <vector>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
 class Instance
 {
-   public:
+    friend class AppState;
+
+   private:
     Instance();
     ~Instance();
 
-    void create(bool enableValidationLayers);
+    void create( bool enableValidationLayers );
     void createDebugMessenger();
     void destroy();
     VkInstance get();
 
-   private:
     VkInstance m_instance;
     VkDebugUtilsMessengerEXT m_debugMessenger;
     bool m_enableValidationLayers;

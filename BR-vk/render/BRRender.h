@@ -2,6 +2,17 @@
 
 #define GLFW_INCLUDE_VULKAN
 
+#include <BRAppState.h>
+#include <BRCommandPool.h>
+#include <BRDevice.h>
+#include <BRFramebuffer.h>
+#include <BRInstance.h>
+#include <BRPipeline.h>
+#include <BRRenderPass.h>
+#include <BRSurface.h>
+#include <BRSwapchain.h>
+#include <BRSyncMgr.h>
+#include <BRVBOMgr.h>
 #include <GLFW/glfw3.h>
 
 #include <array>
@@ -14,18 +25,10 @@
 #include <stdexcept>
 #include <vector>
 
-#include <BRCommandPool.h>
-#include <BRDevice.h>
-#include <BRFramebuffer.h>
-#include <BRInstance.h>
-#include <BRPipeline.h>
-#include <BRRenderPass.h>
-#include <BRSurface.h>
-#include <BRSwapchain.h>
-#include <BRSyncMgr.h>
-#include <BRVBOMgr.h>
+namespace BR
+{
 
-class VkRender
+class BRRender
 {
    public:
     void run();
@@ -34,16 +37,13 @@ class VkRender
    private:
     GLFWwindow* m_window;
 
-    BR::Instance m_instance;
-    BR::Device m_device;
-    BR::Surface m_surface;
-    BR::Swapchain m_swapchain;
-    BR::RenderPass m_renderPass;
-    BR::Pipeline m_pipeline;
-    BR::Framebuffer m_framebuffer;
-    BR::CommandPool m_commandPool;
-    BR::SyncMgr m_syncMgr;
-    BR::VBOMgr m_vboMgr;
+    RenderPass m_renderPass;
+    Pipeline m_pipeline;
+
+    Framebuffer m_framebuffer;
+    CommandPool m_commandPool;
+    SyncMgr m_syncMgr;
+    VBOMgr m_vboMgr;
 
     std::vector<VkCommandBuffer> m_commandBuffers;
     std::vector<VkSemaphore> m_imageAvailableSemaphores;
@@ -53,9 +53,8 @@ class VkRender
     VkBuffer m_vertexBuffer;
 
     int m_currentFrame = 0;
-    
 
-    const std::vector<BR::Pipeline::Vertex> m_vertices = {
+    const std::vector<Pipeline::Vertex> m_vertices = {
         { { 0.0f, -0.5f }, { 1.0f, 1.0f, 1.0f } },
         { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
         { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } } };
@@ -71,6 +70,8 @@ class VkRender
     void drawFrame();
     void cleanup();
 };
+
+}  // namespace BR
 
 /*
     Swap chain gives you the images (VRAM)

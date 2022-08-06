@@ -1,13 +1,12 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
-#include <glm/glm.hpp>
-#include <array>
-
 #include <BRDevice.h>
 #include <BRRenderPass.h>
 #include <BRSwapchain.h>
+
+#include <array>
+#include <glm/glm.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
@@ -17,8 +16,8 @@ class Pipeline
     Pipeline();
     ~Pipeline();
 
-    void create( Device& device, Swapchain& swapchain, RenderPass& renderpass );
-    void destroy( Device& device );
+    void create( RenderPass& renderpass );
+    void destroy();
     VkPipeline get();
 
     struct Vertex

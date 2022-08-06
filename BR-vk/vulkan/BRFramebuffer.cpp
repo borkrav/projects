@@ -1,7 +1,8 @@
-#include <cassert>
-
+#include <BRAppState.h>
 #include <BRFramebuffer.h>
 #include <Util.h>
+
+#include <cassert>
 
 using namespace BR;
 
@@ -14,15 +15,15 @@ Framebuffer::~Framebuffer()
     assert( m_swapChainFramebuffers.empty() );
 }
 
-void Framebuffer::create( Swapchain& swapchain, RenderPass& renderpass, Device& device )
+void Framebuffer::create( RenderPass& renderpass )
 {
     /*
     * The framebuffer binds the VkImageViews from the swap chain
     *   with the attachement that we specified in the render pass
     */
 
-    auto imageViews = swapchain.getImageViews();
-    auto extent = swapchain.getExtent();
+    auto imageViews = AppState::instance().getImageViews();
+    auto extent = AppState::instance().getSwapchainExtent();
 
     m_swapChainFramebuffers.resize( imageViews.size() );
 
@@ -39,9 +40,9 @@ void Framebuffer::create( Swapchain& swapchain, RenderPass& renderpass, Device& 
         framebufferInfo.height = extent.height;
         framebufferInfo.layers = 1;
 
-        VkResult result =
-            vkCreateFramebuffer( device.getLogicalDevice(), &framebufferInfo,
-                                 nullptr, &m_swapChainFramebuffers[i] );
+        VkResult result = vkCreateFramebuffer(
+            AppState::instance().getLogicalDevice(), &framebufferInfo, nullptr,
+            &m_swapChainFramebuffers[i] );
         checkSuccess( result );
     }
 
@@ -49,11 +50,11 @@ void Framebuffer::create( Swapchain& swapchain, RenderPass& renderpass, Device& 
             static_cast<int>( imageViews.size() ) );
 }
 
-void Framebuffer::destroy( Device& device )
+void Framebuffer::destroy()
 {
     for ( auto framebuffer : m_swapChainFramebuffers )
-        vkDestroyFramebuffer( device.getLogicalDevice(), framebuffer,
-                              nullptr );
+        vkDestroyFramebuffer( AppState::instance().getLogicalDevice(),
+                              framebuffer, nullptr );
 
     m_swapChainFramebuffers.clear();
 }

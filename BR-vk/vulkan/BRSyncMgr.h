@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
 #include <BRDevice.h>
+
 #include <vector>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
@@ -13,9 +13,9 @@ class SyncMgr
     SyncMgr();
     ~SyncMgr();
 
-    VkSemaphore createSemaphore( Device& device );
-    VkFence createFence( Device& device );
-    void destroy( Device& device );
+    VkSemaphore createSemaphore();
+    VkFence createFence();
+    void destroy();
 
    private:
     std::vector<VkSemaphore> m_semaphores;

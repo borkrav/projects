@@ -1,25 +1,26 @@
+#include <BRAppState.h>
 #include <BRPipeline.h>
-#include <cassert>
 #include <Util.h>
+
+#include <cassert>
 #include <iostream>
 
 using namespace BR;
 
-VkShaderModule createShaderModule( Device& device, const std::vector<char>& code )
+VkShaderModule createShaderModule( VkDevice device,
+                                   const std::vector<char>& code )
 {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>( code.data() );
     VkShaderModule shaderModule;
-    VkResult result = vkCreateShaderModule(
-        device.getLogicalDevice(), &createInfo, nullptr, &shaderModule );
+    VkResult result =
+        vkCreateShaderModule( device, &createInfo, nullptr, &shaderModule );
     checkSuccess( result );
 
     return shaderModule;
 }
-
-
 
 Pipeline::Pipeline()
     : m_graphicsPipeline( VK_NULL_HANDLE ), m_pipelineLayout( VK_NULL_HANDLE )
@@ -32,9 +33,9 @@ Pipeline::~Pipeline()
             m_pipelineLayout == VK_NULL_HANDLE );
 }
 
-void Pipeline::create(Device& device, Swapchain& swapchain, RenderPass& renderpass)
+void Pipeline::create( RenderPass& renderpass )
 {
-/*
+    /*
     * Here we have a bunch of objects that define pipleline stages
     * This is just the graphics pipeline, with all programmable and fixed stages
     * 
@@ -52,8 +53,10 @@ void Pipeline::create(Device& device, Swapchain& swapchain, RenderPass& renderpa
     printf( "\nLoaded shader: %s\n", "build/shaders/shader.vert.spv" );
     printf( "Loaded shader: %s\n", "build/shaders/shader.frag.spv" );
 
-    VkShaderModule vertShaderModule = createShaderModule( device, vertShaderCode );
-    VkShaderModule fragShaderModule = createShaderModule( device, fragShaderCode );
+    VkShaderModule vertShaderModule = createShaderModule(
+        AppState::instance().getLogicalDevice(), vertShaderCode );
+    VkShaderModule fragShaderModule = createShaderModule(
+        AppState::instance().getLogicalDevice(), fragShaderCode );
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType =
@@ -92,7 +95,7 @@ void Pipeline::create(Device& device, Swapchain& swapchain, RenderPass& renderpa
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    auto extent = swapchain.getExtent();
+    auto extent = AppState::instance().getSwapchainExtent();
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -170,9 +173,9 @@ void Pipeline::create(Device& device, Swapchain& swapchain, RenderPass& renderpa
     pipelineLayoutInfo.pushConstantRangeCount = 0;     // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr;  // Optional
 
-    VkResult result = vkCreatePipelineLayout( device.getLogicalDevice(),
-                                              &pipelineLayoutInfo, nullptr,
-                                              &m_pipelineLayout );
+    VkResult result = vkCreatePipelineLayout(
+        AppState::instance().getLogicalDevice(), &pipelineLayoutInfo, nullptr,
+        &m_pipelineLayout );
 
     checkSuccess( result );
 
@@ -194,26 +197,26 @@ void Pipeline::create(Device& device, Swapchain& swapchain, RenderPass& renderpa
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;  // Optional
     pipelineInfo.basePipelineIndex = -1;               // Optional
 
-    result = vkCreateGraphicsPipelines( device.getLogicalDevice(),
+    result = vkCreateGraphicsPipelines( AppState::instance().getLogicalDevice(),
                                         VK_NULL_HANDLE, 1, &pipelineInfo,
                                         nullptr, &m_graphicsPipeline );
 
     checkSuccess( result );
 
-    vkDestroyShaderModule( device.getLogicalDevice(), fragShaderModule,
-                           nullptr );
-    vkDestroyShaderModule( device.getLogicalDevice(), vertShaderModule,
-                           nullptr );
+    vkDestroyShaderModule( AppState::instance().getLogicalDevice(),
+                           fragShaderModule, nullptr );
+    vkDestroyShaderModule( AppState::instance().getLogicalDevice(),
+                           vertShaderModule, nullptr );
 
     printf( "\nCreated Graphics Pipeline \n" );
 }
 
-void Pipeline::destroy(Device& device)
+void Pipeline::destroy()
 {
-    vkDestroyPipeline( device.getLogicalDevice(), m_graphicsPipeline,
-                       nullptr );
-    vkDestroyPipelineLayout( device.getLogicalDevice(), m_pipelineLayout,
-                             nullptr );
+    vkDestroyPipeline( AppState::instance().getLogicalDevice(),
+                       m_graphicsPipeline, nullptr );
+    vkDestroyPipelineLayout( AppState::instance().getLogicalDevice(),
+                             m_pipelineLayout, nullptr );
 
     m_graphicsPipeline = VK_NULL_HANDLE;
     m_pipelineLayout = VK_NULL_HANDLE;

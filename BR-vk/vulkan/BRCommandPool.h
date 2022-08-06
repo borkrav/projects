@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
 #include <BRDevice.h>
+
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
@@ -12,9 +12,9 @@ class CommandPool
     CommandPool();
     ~CommandPool();
 
-    void create( Device& device );
-    VkCommandBuffer createBuffer( Device& device );
-    void destroy( Device& device );
+    void create();
+    VkCommandBuffer createBuffer();
+    void destroy();
 
    private:
     VkCommandPool m_commandPool;

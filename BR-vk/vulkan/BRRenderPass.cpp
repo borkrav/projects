@@ -1,11 +1,12 @@
+#include <BRAppState.h>
 #include <BRRenderPass.h>
 #include <Util.h>
+
 #include <cassert>
 
 using namespace BR;
 
-RenderPass::RenderPass()
-    : m_renderPass( VK_NULL_HANDLE )
+RenderPass::RenderPass() : m_renderPass( VK_NULL_HANDLE )
 {
 }
 
@@ -14,7 +15,7 @@ RenderPass::~RenderPass()
     assert( m_renderPass == VK_NULL_HANDLE );
 }
 
-void RenderPass::create( Device& device, Swapchain& swapchain )
+void RenderPass::create()
 {
     /*
     * We're giving Vulkan a "map" for how we plan to use 
@@ -44,7 +45,7 @@ void RenderPass::create( Device& device, Swapchain& swapchain )
     */
 
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapchain.getFormat();
+    colorAttachment.format = AppState::instance().getSwapchainFormat();
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -84,18 +85,20 @@ void RenderPass::create( Device& device, Swapchain& swapchain )
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    VkResult result = vkCreateRenderPass(
-        device.getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass );
+    VkResult result =
+        vkCreateRenderPass( AppState::instance().getLogicalDevice(),
+                            &renderPassInfo, nullptr, &m_renderPass );
 
     checkSuccess( result );
 
     printf( "\nCreated Render Pass\n" );
 }
 
-void RenderPass::destroy( Device& device )
+void RenderPass::destroy()
 {
-    vkDestroyRenderPass( device.getLogicalDevice(), m_renderPass, nullptr );
-    
+    vkDestroyRenderPass( AppState::instance().getLogicalDevice(), m_renderPass,
+                         nullptr );
+
     m_renderPass = VK_NULL_HANDLE;
 }
 

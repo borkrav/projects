@@ -1,15 +1,17 @@
-#include <VkRender.h>
+#include <BRRender.h>
 #include <Util.h>
 
-#include <ranges>
 #include <algorithm>
 #include <cassert>
+#include <ranges>
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-void VkRender::run()
+using namespace BR;
+
+void BRRender::run()
 {
     initWindow();
     initVulkan();
@@ -17,7 +19,7 @@ void VkRender::run()
     cleanup();
 }
 
-void VkRender::initWindow()
+void BRRender::initWindow()
 {
     glfwInit();
 
@@ -30,42 +32,33 @@ void VkRender::initWindow()
         m_window,
         []( GLFWwindow* window, int width, int height )
         {
-            auto app = reinterpret_cast<VkRender*>(
+            auto app = reinterpret_cast<BRRender*>(
                 glfwGetWindowUserPointer( window ) );
             app->m_framebufferResized = true;
         } );
 }
 
-void VkRender::initVulkan()
+void BRRender::initVulkan()
 {
-    m_instance.create( true );
-    m_surface.create( m_instance, m_window );
+    AppState::instance().init( m_window );
 
-    const std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
-    m_device.create( m_instance, deviceExtensions, m_surface );
-    m_swapchain.create( m_window, m_device, m_surface );
-    m_swapchain.createImageViews( m_device );
-    m_renderPass.create( m_device, m_swapchain );
-    m_pipeline.create( m_device, m_swapchain, m_renderPass );
-    m_framebuffer.create( m_swapchain, m_renderPass, m_device );
-    m_commandPool.create( m_device );
+    m_renderPass.create();
+    m_pipeline.create( m_renderPass );
+    m_framebuffer.create( m_renderPass );
+    m_commandPool.create();
 
     for ( int i : std::views::iota( 0, MAX_FRAMES_IN_FLIGHT ) )
     {
-        m_commandBuffers.emplace_back( m_commandPool.createBuffer( m_device ) );
-        m_imageAvailableSemaphores.emplace_back(
-            m_syncMgr.createSemaphore( m_device ) );
-        m_renderFinishedSemaphores.emplace_back(
-            m_syncMgr.createSemaphore( m_device ) );
-        m_inFlightFences.emplace_back( m_syncMgr.createFence( m_device ) );
+        m_commandBuffers.emplace_back( m_commandPool.createBuffer() );
+        m_imageAvailableSemaphores.emplace_back( m_syncMgr.createSemaphore() );
+        m_renderFinishedSemaphores.emplace_back( m_syncMgr.createSemaphore() );
+        m_inFlightFences.emplace_back( m_syncMgr.createFence() );
     }
 
-    m_vertexBuffer = m_vboMgr.createBuffer( m_vertices, m_device );
+    m_vertexBuffer = m_vboMgr.createBuffer( m_vertices );
 }
 
-void VkRender::recreateSwapchain()
+void BRRender::recreateSwapchain()
 {
     //if minimized
     int width = 0, height = 0;
@@ -76,19 +69,14 @@ void VkRender::recreateSwapchain()
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle( m_device.getLogicalDevice() );
+    vkDeviceWaitIdle( AppState::instance().getLogicalDevice() );
 
-    //destroy old objects
-    m_framebuffer.destroy( m_device );
-    m_swapchain.destroy( m_device );
-
-    //create new objects
-    m_swapchain.create( m_window, m_device, m_surface );
-    m_swapchain.createImageViews( m_device );
-    m_framebuffer.create( m_swapchain, m_renderPass, m_device );
+    m_framebuffer.destroy();
+    AppState::instance().recreateSwapchain();
+    m_framebuffer.create( m_renderPass );
 }
 
-void VkRender::recordCommandBuffer( VkCommandBuffer commandBuffer,
+void BRRender::recordCommandBuffer( VkCommandBuffer commandBuffer,
                                     uint32_t imageIndex )
 {
     /*
@@ -98,7 +86,7 @@ void VkRender::recordCommandBuffer( VkCommandBuffer commandBuffer,
     * Draw call - 3 vertices
     */
 
-    auto extent = m_swapchain.getExtent();
+    auto extent = AppState::instance().getSwapchainExtent();
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -143,7 +131,7 @@ void VkRender::recordCommandBuffer( VkCommandBuffer commandBuffer,
     // );
 }
 
-void VkRender::drawFrame()
+void BRRender::drawFrame()
 {
     /* 
     * For every frame:
@@ -154,13 +142,15 @@ void VkRender::drawFrame()
     *   present the image ( waiting on the rendering to be finished - semaphore )
     */
 
-    vkWaitForFences( m_device.getLogicalDevice(), 1, &m_inFlightFences[m_currentFrame], VK_TRUE,
-                     UINT64_MAX );
-    
+    vkWaitForFences( AppState::instance().getLogicalDevice(), 1,
+                     &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX );
+
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR( m_device.getLogicalDevice(), m_swapchain.get(),
-                           UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame],
-                           VK_NULL_HANDLE, &imageIndex );
+    VkResult result =
+        vkAcquireNextImageKHR( AppState::instance().getLogicalDevice(),
+                               AppState::instance().getSwapchain(), UINT64_MAX,
+                               m_imageAvailableSemaphores[m_currentFrame],
+                               VK_NULL_HANDLE, &imageIndex );
 
     if ( result == VK_ERROR_OUT_OF_DATE_KHR )
     {
@@ -173,7 +163,8 @@ void VkRender::drawFrame()
     }
 
     // Only reset the fence if we are submitting work
-    vkResetFences( m_device.getLogicalDevice(), 1, &m_inFlightFences[m_currentFrame] );
+    vkResetFences( AppState::instance().getLogicalDevice(), 1,
+                   &m_inFlightFences[m_currentFrame] );
 
     vkResetCommandBuffer( m_commandBuffers[m_currentFrame], 0 );
     recordCommandBuffer( m_commandBuffers[m_currentFrame], imageIndex );
@@ -181,7 +172,8 @@ void VkRender::drawFrame()
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
+    VkSemaphore waitSemaphores[] = {
+        m_imageAvailableSemaphores[m_currentFrame] };
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
@@ -190,12 +182,13 @@ void VkRender::drawFrame()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
 
-    VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
+    VkSemaphore signalSemaphores[] = {
+        m_renderFinishedSemaphores[m_currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    result = vkQueueSubmit( m_device.getGraphicsQueue(), 1,
-                                     &submitInfo, m_inFlightFences[m_currentFrame] );
+    result = vkQueueSubmit( AppState::instance().getGraphicsQueue(), 1,
+                            &submitInfo, m_inFlightFences[m_currentFrame] );
 
     checkSuccess( result );
 
@@ -205,15 +198,17 @@ void VkRender::drawFrame()
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = { m_swapchain.get() };
+    VkSwapchainKHR swapChains[] = { AppState::instance().getSwapchain() };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;  // Optional
 
-    result = vkQueuePresentKHR( m_device.getGraphicsQueue(), &presentInfo );
+    result = vkQueuePresentKHR( AppState::instance().getGraphicsQueue(),
+                                &presentInfo );
 
-    if ( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized )
+    if ( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
+         m_framebufferResized )
     {
         m_framebufferResized = false;
         recreateSwapchain();
@@ -226,28 +221,24 @@ void VkRender::drawFrame()
     m_currentFrame = ( m_currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void VkRender::mainLoop()
+void BRRender::mainLoop()
 {
     while ( !glfwWindowShouldClose( m_window ) )
     {
         glfwPollEvents();
         drawFrame();
     }
-    vkDeviceWaitIdle( m_device.getLogicalDevice() );
+    vkDeviceWaitIdle( AppState::instance().getLogicalDevice() );
 }
 
-void VkRender::cleanup()
+void BRRender::cleanup()
 {
-    m_vboMgr.destroy( m_device );
-    m_syncMgr.destroy( m_device );
-    m_commandPool.destroy( m_device );
-    m_framebuffer.destroy( m_device );
-    m_pipeline.destroy( m_device );
-    m_renderPass.destroy( m_device );
-    m_swapchain.destroy( m_device );
-    m_device.destroy();
-    m_surface.destroy( m_instance );
-    m_instance.destroy();
+    m_vboMgr.destroy();
+    m_syncMgr.destroy();
+    m_commandPool.destroy();
+    m_framebuffer.destroy();
+    m_pipeline.destroy();
+    m_renderPass.destroy();
 
     glfwDestroyWindow( m_window );
     glfwTerminate();

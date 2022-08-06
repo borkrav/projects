@@ -1,5 +1,7 @@
+#include <BRAppState.h>
 #include <BRDevice.h>
 #include <Util.h>
+
 #include <cassert>
 
 using namespace BR;
@@ -18,19 +20,20 @@ Device::~Device()
 }
 
 //TODO surface should be it's own object
-void Device::create(Instance& instance, const std::vector<const char*>&deviceExtensions, Surface& surface )
+void Device::create( const std::vector<const char*>& deviceExtensions )
 {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices( instance.get(), &deviceCount, nullptr );
+    vkEnumeratePhysicalDevices( AppState::instance().getInstance(),
+                                &deviceCount, nullptr );
 
     assert( deviceCount != 0 );
 
     std::vector<VkPhysicalDevice> devices( deviceCount );
-    vkEnumeratePhysicalDevices( instance.get(), &deviceCount, devices.data() );
+    vkEnumeratePhysicalDevices( AppState::instance().getInstance(),
+                                &deviceCount, devices.data() );
 
     // pick the first GPU in the system
     m_physicalDevice = devices[0];
-
 
     /*
     * Vulkan has concept of physical and logical device
@@ -40,12 +43,12 @@ void Device::create(Instance& instance, const std::vector<const char*>&deviceExt
 
     // get the queue families
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties( m_physicalDevice, &queueFamilyCount,
-                                              nullptr );
+    vkGetPhysicalDeviceQueueFamilyProperties( m_physicalDevice,
+                                              &queueFamilyCount, nullptr );
 
     std::vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
-    vkGetPhysicalDeviceQueueFamilyProperties( m_physicalDevice, &queueFamilyCount,
-                                              queueFamilies.data() );
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        m_physicalDevice, &queueFamilyCount, queueFamilies.data() );
 
     // ensure one queue has graphics bit
     int graphicsFamilyIndex = -1;
@@ -106,16 +109,18 @@ void Device::create(Instance& instance, const std::vector<const char*>&deviceExt
 
     // assuming the graphics queue also has presentation support
     VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, graphicsFamilyIndex, surface.get(),
+    vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, graphicsFamilyIndex,
+                                          AppState::instance().getSurface(),
                                           &presentSupport );
     assert( presentSupport );
 
-    VkResult result =
-        vkCreateDevice( m_physicalDevice, &createInfo, nullptr, &m_logicalDevice );
+    VkResult result = vkCreateDevice( m_physicalDevice, &createInfo, nullptr,
+                                      &m_logicalDevice );
 
     checkSuccess( result );
 
-    vkGetDeviceQueue( m_logicalDevice, graphicsFamilyIndex, 0, &m_graphicsQueue );
+    vkGetDeviceQueue( m_logicalDevice, graphicsFamilyIndex, 0,
+                      &m_graphicsQueue );
 
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties( m_physicalDevice, &properties );
@@ -128,26 +133,30 @@ void Device::create(Instance& instance, const std::vector<const char*>&deviceExt
     int famCounter = 0;
     for ( const auto& family : queueFamilies )
     {
-        printf( "\tQueue number: %s\n", std::to_string( family.queueCount ).c_str() );
-        printf( "\tQueue flags: %s%s%s%s%s \n",
-                family.queueFlags & VK_QUEUE_GRAPHICS_BIT ? "Graphics " : "",
-                family.queueFlags & VK_QUEUE_COMPUTE_BIT ? "Compute " : "",
-                family.queueFlags & VK_QUEUE_TRANSFER_BIT ? "Transfer " : "",
-                family.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT ? "SparseBinding " : "",
-                family.queueFlags & VK_QUEUE_PROTECTED_BIT ? "Protected " : "" );
+        printf( "\tQueue number: %s\n",
+                std::to_string( family.queueCount ).c_str() );
+        printf(
+            "\tQueue flags: %s%s%s%s%s \n",
+            family.queueFlags & VK_QUEUE_GRAPHICS_BIT ? "Graphics " : "",
+            family.queueFlags & VK_QUEUE_COMPUTE_BIT ? "Compute " : "",
+            family.queueFlags & VK_QUEUE_TRANSFER_BIT ? "Transfer " : "",
+            family.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT ? "SparseBinding "
+                                                            : "",
+            family.queueFlags & VK_QUEUE_PROTECTED_BIT ? "Protected " : "" );
 
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, famCounter++,
-                                              surface.get(), &presentSupport );
+                                              AppState::instance().getSurface(),
+                                              &presentSupport );
 
         printf( "\tPresentation Support: %d\n\n", presentSupport );
     }
     printf( "\nDevice Extensions:\n" );
     for ( auto extension : deviceExtensions )
         printf( "\t%s\n", extension );
-    printf( "\nGot Device queue from family with index: %d\n", graphicsFamilyIndex );
+    printf( "\nGot Device queue from family with index: %d\n",
+            graphicsFamilyIndex );
 }
-
 
 void Device::destroy()
 {

@@ -24,7 +24,3 @@ static void checkSuccess( VkResult result )
 {
     assert( result == VK_SUCCESS );
 }
-
-
-
-

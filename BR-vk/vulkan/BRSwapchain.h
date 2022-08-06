@@ -1,27 +1,28 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
 #include <BRDevice.h>
+
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
 class Swapchain
 {
-   public:
+    friend class AppState;
+
+   private:
     Swapchain();
     ~Swapchain();
 
-    void create( GLFWwindow* window, Device& device, Surface& surface );
-    void createImageViews(Device& device);
-    void destroy( Device& device );
+    void create( GLFWwindow* window, Surface& surface );
+    void createImageViews();
+    void destroy();
 
     VkSwapchainKHR get();
     VkFormat getFormat();
     VkExtent2D& getExtent();
     std::vector<VkImageView>& getImageViews();
 
-   private:
     VkSwapchainKHR m_swapChain;
     std::vector<VkImage> m_swapChainImages;
     VkFormat m_swapChainFormat;

@@ -16,8 +16,8 @@ class Framebuffer
     Framebuffer();
     ~Framebuffer();
 
-    void create( Swapchain& swapchain, RenderPass& renderpass, Device& device );
-    void destroy( Device& device );
+    void create( RenderPass& renderpass );
+    void destroy( );
     std::vector<VkFramebuffer>& get();
 
    private:

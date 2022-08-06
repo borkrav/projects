@@ -1,8 +1,8 @@
+#include <BRAppState.h>
 #include <BRCommandPool.h>
+#include <Util.h>
 
 #include <cassert>
-
-#include <Util.h>
 
 using namespace BR;
 
@@ -15,7 +15,7 @@ CommandPool::~CommandPool()
     assert( m_commandPool == VK_NULL_HANDLE );
 }
 
-void CommandPool::create( Device& device )
+void CommandPool::create()
 {
     /*
     * Command pools allow concurrent recording of command buffers
@@ -25,17 +25,18 @@ void CommandPool::create( Device& device )
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = device.getFamilyIndex();
+    poolInfo.queueFamilyIndex = AppState::instance().getFamilyIndex();
 
-    VkResult result = vkCreateCommandPool( device.getLogicalDevice(), &poolInfo,
-                                           nullptr, &m_commandPool );
+    VkResult result =
+        vkCreateCommandPool( AppState::instance().getLogicalDevice(), &poolInfo,
+                             nullptr, &m_commandPool );
 
     checkSuccess( result );
 
     printf( "\nCreated Command Pool\n" );
 }
 
-VkCommandBuffer CommandPool::createBuffer( Device& device )
+VkCommandBuffer CommandPool::createBuffer()
 {
     /*
     * Record work commands into this
@@ -50,8 +51,8 @@ VkCommandBuffer CommandPool::createBuffer( Device& device )
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
 
-    VkResult result = vkAllocateCommandBuffers( device.getLogicalDevice(),
-                                                &allocInfo, &buff );
+    VkResult result = vkAllocateCommandBuffers(
+        AppState::instance().getLogicalDevice(), &allocInfo, &buff );
 
     checkSuccess( result );
 
@@ -60,9 +61,10 @@ VkCommandBuffer CommandPool::createBuffer( Device& device )
     return buff;
 }
 
-void CommandPool::destroy( Device& device )
+void CommandPool::destroy()
 {
-    vkDestroyCommandPool( device.getLogicalDevice(), m_commandPool, nullptr );
+    vkDestroyCommandPool( AppState::instance().getLogicalDevice(),
+                          m_commandPool, nullptr );
 
     m_commandPool = VK_NULL_HANDLE;
 }

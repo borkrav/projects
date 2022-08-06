@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan_handles.hpp>
-
-#include <BRSwapchain.h>
 #include <BRDevice.h>
+#include <BRSwapchain.h>
+
+#include <vulkan/vulkan_handles.hpp>
 
 namespace BR
 {
@@ -13,8 +13,8 @@ class RenderPass
     RenderPass();
     ~RenderPass();
 
-    void create( Device& device, Swapchain& swapchain );
-    void destroy( Device& device );
+    void create();
+    void destroy();
     VkRenderPass get();
 
    private:

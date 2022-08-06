@@ -1,5 +1,7 @@
+#include <BRAppState.h>
 #include <BRSwapchain.h>
 #include <Util.h>
+
 #include <cassert>
 
 using namespace BR;
@@ -13,7 +15,7 @@ Swapchain::~Swapchain()
     assert( m_swapChain == VK_NULL_HANDLE && m_swapChainImageViews.empty() );
 }
 
-void Swapchain::create( GLFWwindow* window, Device& device, Surface& surface )
+void Swapchain::create( GLFWwindow* window, Surface& surface )
 {
     VkSurfaceFormatKHR surfaceFormat{};
     surfaceFormat.format = VK_FORMAT_B8G8R8A8_SRGB;
@@ -30,8 +32,9 @@ void Swapchain::create( GLFWwindow* window, Device& device, Surface& surface )
                           static_cast<uint32_t>( height ) };
 
     VkSurfaceCapabilitiesKHR capabilities{};
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR( device.getPhysicaDevice(),
-                                               surface.get(), &capabilities );
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        AppState::instance().getPhysicalDevice(),
+        AppState::instance().getSurface(), &capabilities );
     uint32_t imageCount = capabilities.minImageCount + 1;
 
     /*
@@ -54,7 +57,7 @@ void Swapchain::create( GLFWwindow* window, Device& device, Surface& surface )
 
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = surface.get();
+    createInfo.surface = AppState::instance().getSurface();
 
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = surfaceFormat.format;
@@ -69,15 +72,17 @@ void Swapchain::create( GLFWwindow* window, Device& device, Surface& surface )
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    VkResult result = vkCreateSwapchainKHR(
-        device.getLogicalDevice(), &createInfo, nullptr, &m_swapChain );
+    VkResult result =
+        vkCreateSwapchainKHR( AppState::instance().getLogicalDevice(),
+                              &createInfo, nullptr, &m_swapChain );
     checkSuccess( result );
 
-    vkGetSwapchainImagesKHR( device.getLogicalDevice(), m_swapChain,
-                             &imageCount, nullptr );
+    vkGetSwapchainImagesKHR( AppState::instance().getLogicalDevice(),
+                             m_swapChain, &imageCount, nullptr );
     m_swapChainImages.resize( imageCount );
-    vkGetSwapchainImagesKHR( device.getLogicalDevice(), m_swapChain,
-                             &imageCount, m_swapChainImages.data() );
+    vkGetSwapchainImagesKHR( AppState::instance().getLogicalDevice(),
+                             m_swapChain, &imageCount,
+                             m_swapChainImages.data() );
 
     printf( "\nCreated Swap Chain\n" );
     printf( "\tFormat: %s\n", "VK_FORMAT_B8G8R8A8_SRGB" );
@@ -87,7 +92,7 @@ void Swapchain::create( GLFWwindow* window, Device& device, Surface& surface )
     printf( "\tImage Count: %d\n", imageCount );
 }
 
-void Swapchain::createImageViews(Device& device)
+void Swapchain::createImageViews()
 {
     /*
     Create image views into the swap chain images
@@ -112,16 +117,15 @@ void Swapchain::createImageViews(Device& device)
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        VkResult result =
-            vkCreateImageView( device.getLogicalDevice(), &createInfo,
-                               nullptr, &m_swapChainImageViews[i] );
+        VkResult result = vkCreateImageView(
+            AppState::instance().getLogicalDevice(), &createInfo, nullptr,
+            &m_swapChainImageViews[i] );
         checkSuccess( result );
     }
     printf( "\nCreated %d Image Views: %s\n",
             static_cast<int>( m_swapChainImages.size() ),
             "VK_IMAGE_VIEW_TYPE_2D" );
 }
-
 
 VkSwapchainKHR Swapchain::get()
 {
@@ -144,14 +148,15 @@ std::vector<VkImageView>& Swapchain::getImageViews()
     return m_swapChainImageViews;
 }
 
-void Swapchain::destroy( Device& device )
+void Swapchain::destroy()
 {
     for ( auto imageView : m_swapChainImageViews )
-        vkDestroyImageView( device.getLogicalDevice(), imageView, nullptr );
+        vkDestroyImageView( AppState::instance().getLogicalDevice(), imageView,
+                            nullptr );
 
-    vkDestroySwapchainKHR( device.getLogicalDevice(), m_swapChain, nullptr );
+    vkDestroySwapchainKHR( AppState::instance().getLogicalDevice(), m_swapChain,
+                           nullptr );
 
     m_swapChain = VK_NULL_HANDLE;
     m_swapChainImageViews.clear();
 }
-
