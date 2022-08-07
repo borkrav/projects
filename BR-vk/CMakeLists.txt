@@ -16,6 +16,8 @@ include_directories("C:/Users/Boris/dev/glfw-3.3.6.bin.WIN64/include")
 include_directories("vulkan")
 include_directories("render")
 include_directories("third-party/imgui")
+include_directories("third-party/tinyobjloader")
+
 
 link_directories("C:/Users/Boris/dev/VulkanSDK/1.3.204.1/Lib")
 link_directories("C:/Users/Boris/dev/glfw-3.3.6.bin.WIN64/lib-vc2022")

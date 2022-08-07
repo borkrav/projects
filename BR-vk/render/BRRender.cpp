@@ -5,6 +5,9 @@
 #include <cassert>
 #include <ranges>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -44,6 +47,37 @@ void BRRender::initWindow()
         } );
 }
 
+void BRRender::loadModel()
+{
+    tinyobj::ObjReader reader;  // Used to read an OBJ file
+    reader.ParseFromFile( "models/cube.obj" );
+
+    assert( reader.Valid() );  // Make sure tinyobj was able to parse this file
+    const std::vector<tinyobj::real_t> objVertices =
+        reader.GetAttrib().GetVertices();
+    const std::vector<tinyobj::shape_t>& objShapes =
+        reader.GetShapes();  // All shapes in the file
+    assert( objShapes.size() == 1 );
+
+    for ( int i = 0; i < objVertices.size(); i += 3 )
+    {
+        BR::Pipeline::Vertex vert;
+        vert.pos.x = objVertices[i];
+        vert.pos.y = objVertices[i+1];
+        vert.pos.z = objVertices[i+2];
+
+        m_vertices.push_back( vert );
+    }
+
+    for( auto shape : objShapes)
+    {
+        for( auto vert : shape.mesh.indices)
+            m_indices.push_back( vert.vertex_index );
+    }
+
+    printf( "Loaded file!\n" );
+}
+
 void BRRender::initVulkan()
 {
     AppState::instance().init( m_window, enableValidationLayers );
@@ -67,7 +101,10 @@ void BRRender::initVulkan()
             m_syncMgr.createFence( "In Flight Fence for frame " + i ) );
     }
 
+    loadModel();
+
     m_vertexBuffer = m_vboMgr.createBuffer( m_vertices );
+    m_indexBuffer = m_vboMgr.createIndexBuffer( m_indices );
 }
 
 void BRRender::recreateSwapchain()
@@ -135,7 +172,8 @@ void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
     vk::DeviceSize offsets[] = { 0 };
 
     commandBuffer.bindVertexBuffers( 0, 1, vertexBuffers, offsets );
-    commandBuffer.draw( static_cast<uint32_t>( m_vertices.size() ), 1, 0, 0 );
+    commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
+    commandBuffer.drawIndexed(static_cast<uint32_t>(m_indices.size()), 1, 0,0,0);
     commandBuffer.endRenderPass();
 
     try

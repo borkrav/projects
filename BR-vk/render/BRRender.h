@@ -53,16 +53,25 @@ class BRRender
     std::vector<vk::Fence> m_inFlightFences;
 
     vk::Buffer m_vertexBuffer;
+    vk::Buffer m_indexBuffer;
 
     int m_currentFrame = 0;
 
-    const std::vector<Pipeline::Vertex> m_vertices = {
-        { { 0.0f, -0.5f }, { 1.0f, 1.0f, 1.0f } },
-        { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
-        { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } } };
+    // const std::vector<Pipeline::Vertex> m_vertices = {
+    //     { { -0.5f, -0.5f, 0.0f } },
+    //     { { 0.5f, -0.5f, 0.0f } },
+    //     { { 0.5f, 0.5f, 0.0f } },
+    //     { { -0.5f, 0.5f, 0.0f } } };
+
+    // const std::vector<uint16_t> m_indices = { 0, 1, 2, 2, 3, 0 };
+
+    std::vector<Pipeline::Vertex> m_vertices;
+    std::vector<uint16_t> m_indices;
 
     void initWindow();
     void initVulkan();
+
+    void loadModel();
 
     void recreateSwapchain();
 
