@@ -50,6 +50,28 @@ class AppState
     vk::Extent2D& getSwapchainExtent();
     std::vector<vk::ImageView>& getImageViews();
 
+
+    //RT Device Functions
+    PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
+    PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR;
+    PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR;
+    PFN_vkGetAccelerationStructureBuildSizesKHR
+        vkGetAccelerationStructureBuildSizesKHR;
+    PFN_vkGetAccelerationStructureDeviceAddressKHR
+        vkGetAccelerationStructureDeviceAddressKHR;
+    PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR;
+    PFN_vkBuildAccelerationStructuresKHR vkBuildAccelerationStructuresKHR;
+    PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR;
+    PFN_vkGetRayTracingShaderGroupHandlesKHR
+        vkGetRayTracingShaderGroupHandlesKHR;
+    PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR;
+
+    //RT Device Properties
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR
+        rayTracingPipelineProperties;
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR
+        accelerationStructureFeatures;
+
 #ifdef NDEBUG
 #else
     BR::Debug getDebug();
@@ -58,6 +80,9 @@ class AppState
    private:
     AppState();
     ~AppState();
+
+    void initRT();
+    void getFunctionPointers();
 
     GLFWwindow* m_window;
 

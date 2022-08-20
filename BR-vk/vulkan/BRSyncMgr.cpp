@@ -25,6 +25,7 @@ vk::Semaphore SyncMgr::createSemaphore( std::string name )
     try
     {
         vk::Semaphore sem = m_device.createSemaphore( info );
+        m_semaphores.push_back( sem );
         DEBUG_NAME( sem, name );
         return sem;
     }
@@ -45,6 +46,7 @@ vk::Fence SyncMgr::createFence( std::string name )
     try
     {
         vk::Fence fence = m_device.createFence( info );
+        m_fences.push_back( fence );
         DEBUG_NAME( fence, name );
         return fence;
     }

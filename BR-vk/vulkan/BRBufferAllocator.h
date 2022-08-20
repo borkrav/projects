@@ -10,7 +10,6 @@
 #include <vector>
 #include <vulkan/vulkan_handles.hpp>
 
-
 namespace BR
 {
 class BufferAllocator
@@ -43,7 +42,11 @@ class BufferAllocator
         m_device.unmapMemory( stageMem );
 
         auto final =
-            createBuffer( size, vk::BufferUsageFlagBits::eTransferDst | type,
+            createBuffer( size,
+                          vk::BufferUsageFlagBits::eTransferDst | type |
+                              vk::BufferUsageFlagBits::eShaderDeviceAddress |
+                              vk::BufferUsageFlagBits::
+                                  eAccelerationStructureBuildInputReadOnlyKHR,
                           vk::MemoryPropertyFlagBits::eDeviceLocal );
         auto resultBuffer = final.first;
         auto resultMem = final.second;
@@ -71,22 +74,31 @@ class BufferAllocator
                            vk::ImageUsageFlags usage,
                            vk::MemoryPropertyFlags memFlags );
 
+    vk::Buffer createAccelStructureBuffer( std::string name,
+                                           vk::DeviceSize size );
+
+    vk::Buffer createScratchBuffer( std::string name, vk::DeviceSize size );
+
     vk::DeviceMemory getMemory( std::variant<vk::Buffer, vk::Image> buffer );
+    uint64_t getDeviceAddress( VkBuffer buffer );
 
     void free( std::variant<vk::Buffer, vk::Image> buffer );
 
     void destroy();
 
    private:
-   // Creates a buffer on the GPU
+    // Creates a buffer on the GPU
     std::pair<vk::Buffer, vk::DeviceMemory> createBuffer(
         vk::DeviceSize size, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags properties );
+
+    uint64_t getBufferDeviceAddress( VkBuffer buffer );
 
     void copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
                      vk::DeviceSize size );
 
     std::map<std::variant<vk::Buffer, vk::Image>, vk::DeviceMemory> m_alloc;
+    std::map<vk::Buffer, uint64_t> m_addresses;
 
     vk::Device m_device;
     CommandPool m_copyPool;

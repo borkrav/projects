@@ -14,6 +14,7 @@
 #include <BRSwapchain.h>
 #include <BRSyncMgr.h>
 #include <BRDescMgr.h>
+#include <BRASBuilder.h>
 #include <GLFW/glfw3.h>
 
 #include <array>
@@ -46,6 +47,7 @@ class BRRender
     SyncMgr m_syncMgr;
     BufferAllocator m_bufferAlloc;
     DescMgr m_descMgr;
+    ASBuilder m_asBuilder;
 
     vk::Device m_device;
 
@@ -67,6 +69,7 @@ class BRRender
     std::vector<Pipeline::Vertex> m_vertices;
     std::vector<uint16_t> m_indices;
 
+    vk::AccelerationStructureKHR m_blas;
 
     struct UniformBufferObject
     {
@@ -74,6 +77,7 @@ class BRRender
         glm::mat4 view;
         glm::mat4 proj;
     };
+
 
     void initWindow();
     void initVulkan();
@@ -91,7 +95,9 @@ class BRRender
     void takeScreenshot();
 
     void initUI();
+    void createBLAS();
     void drawUI();
+    uint64_t getBufferDeviceAddress( VkBuffer buffer );
 
     void createDescriptorSets();
     void updateUniformBuffer( uint32_t currentImage );

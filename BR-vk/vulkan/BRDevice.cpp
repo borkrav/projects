@@ -88,7 +88,25 @@ void Device::create( std::string name,
     auto createInfo =
         vk::DeviceCreateInfo( vk::DeviceCreateFlags(), 1, &queueCreateInfo );
 
-    // enable swapchain
+    // enable vulkan 1.3
+    vk::PhysicalDeviceVulkan12Features vkFeatures;
+    vkFeatures.bufferDeviceAddress = true;
+    vkFeatures.descriptorIndexing = true;
+
+    // enable RT
+    vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rtFeatures;
+    rtFeatures.rayTracingPipeline = true;
+
+    // enable Acceleration Structures
+    vk::PhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures;
+    accelFeatures.accelerationStructure = true;
+
+    //Chain the requests
+    createInfo.pNext = &vkFeatures;
+    vkFeatures.pNext = &rtFeatures;
+    rtFeatures.pNext = &accelFeatures;
+
+    // enable extensions
     createInfo.enabledExtensionCount =
         static_cast<uint32_t>( deviceExtensions.size() );
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();

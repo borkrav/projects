@@ -73,13 +73,15 @@ std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
     vk::MemoryRequirements memRequirements =
         m_device.getBufferMemoryRequirements( buffer );
 
+    vk::MemoryAllocateFlagsInfo allocFlags;
+    allocFlags.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
+
     vk::MemoryAllocateInfo allocInfo{};
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex =
-        findMemoryType( memRequirements.memoryTypeBits,
-                        vk::MemoryPropertyFlagBits::eHostVisible |
-                            vk::MemoryPropertyFlagBits::eHostCoherent,
+        findMemoryType( memRequirements.memoryTypeBits, properties,
                         AppState::instance().getPhysicalDevice() );
+    allocInfo.pNext = &allocFlags;
 
     try
     {
@@ -91,6 +93,13 @@ std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
     }
 
     m_device.bindBufferMemory( buffer, mem, 0 );
+
+    // if we want the address, save it
+    if ( (usage & vk::BufferUsageFlagBits::eShaderDeviceAddress) == vk::BufferUsageFlagBits::eShaderDeviceAddress )
+    {
+        auto address = getBufferDeviceAddress( buffer );
+        m_addresses[buffer] = address;
+    }
 
     return std::make_pair( buffer, mem );
 }
@@ -202,6 +211,44 @@ vk::Image BufferAllocator::createImage( std::string name, uint32_t width,
     return image;
 }
 
+vk::Buffer BufferAllocator::createAccelStructureBuffer( std::string name,
+                                                        vk::DeviceSize size )
+{
+    auto result = createBuffer(
+        size,
+        vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::MemoryPropertyFlagBits::eDeviceLocal );
+
+    auto buff = result.first;
+    auto mem = result.second;
+
+    m_alloc[buff] = mem;
+
+    DEBUG_NAME( buff, name );
+
+    return buff;
+}
+
+vk::Buffer BufferAllocator::createScratchBuffer( std::string name,
+                                                 vk::DeviceSize size )
+{
+    auto result =
+        createBuffer( size,
+                      vk::BufferUsageFlagBits::eStorageBuffer |
+                          vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                      vk::MemoryPropertyFlagBits::eDeviceLocal );
+
+    auto buff = result.first;
+    auto mem = result.second;
+
+    m_alloc[buff] = mem;
+
+    DEBUG_NAME( buff, name );
+
+    return buff;
+}
+
 vk::DeviceMemory BufferAllocator::getMemory(
     std::variant<vk::Buffer, vk::Image> buffer )
 {
@@ -210,6 +257,22 @@ vk::DeviceMemory BufferAllocator::getMemory(
     assert( it != m_alloc.end() );
 
     return it->second;
+}
+
+uint64_t BufferAllocator::getDeviceAddress( VkBuffer buffer )
+{
+    auto it = m_addresses.find( buffer );
+    assert( it != m_addresses.end() );
+    return it->second;
+}
+
+uint64_t BufferAllocator::getBufferDeviceAddress( VkBuffer buffer )
+{
+    VkBufferDeviceAddressInfoKHR bufferDeviceAI{};
+    bufferDeviceAI.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    bufferDeviceAI.buffer = buffer;
+    return AppState::instance().vkGetBufferDeviceAddressKHR( m_device,
+                                                             &bufferDeviceAI );
 }
 
 void BufferAllocator::free( std::variant<vk::Buffer, vk::Image> buffer )
@@ -229,6 +292,14 @@ void BufferAllocator::free( std::variant<vk::Buffer, vk::Image> buffer )
     m_device.freeMemory( mem );
 
     m_alloc.erase( it );
+
+    //delete the address
+    if ( std::holds_alternative<vk::Buffer>( obj ) )
+    {
+        auto it2 = m_addresses.find( std::get<vk::Buffer>( buffer ) );
+        if ( it2 != m_addresses.end() )
+            m_addresses.erase( it2 );
+    }
 }
 
 void BufferAllocator::destroy()

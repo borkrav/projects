@@ -121,8 +121,8 @@ void Instance::create( bool enableValidationLayers )
     */
 
     auto appInfo = vk::ApplicationInfo(
-        "Hello Triangle", VK_MAKE_VERSION( 1, 0, 0 ), "No Engine",
-        VK_MAKE_VERSION( 1, 0, 0 ), VK_API_VERSION_1_0 );
+        "BR Renderer", VK_MAKE_VERSION( 1, 0, 0 ), "My Engine",
+        VK_MAKE_VERSION( 1, 0, 0 ), VK_API_VERSION_1_3 );
 
     /*
     * Structure for creation of vulkan instance, specifies layers and extensions

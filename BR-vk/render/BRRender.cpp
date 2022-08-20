@@ -19,7 +19,6 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
-
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -118,7 +117,7 @@ void BRRender::initUI()
 {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    io.IniFilename = nullptr;  
+    io.IniFilename = nullptr;
     io.LogFilename = nullptr;
 
     ImGui_ImplVulkan_InitInfo info = {};
@@ -194,9 +193,23 @@ void BRRender::initVulkan()
     m_indexBuffer = m_bufferAlloc.createAndStageBuffer(
         "Index", m_indices, vk::BufferUsageFlagBits::eIndexBuffer );
 
+    m_asBuilder.create( m_bufferAlloc );
+
     createDescriptorSets();
 
     initUI();
+    createBLAS();
+}
+
+void BRRender::createBLAS()
+{
+    //BLAS
+
+    auto it = std::max_element( m_indices.begin(), m_indices.end() );
+    int maxVertex = ( *it ) + 1;
+
+    m_blas = m_asBuilder.buildBlas( "BLAS", m_vertexBuffer, m_indexBuffer,
+                                    maxVertex, m_indices.size() );
 }
 
 void BRRender::createDescriptorSets()
@@ -667,6 +680,7 @@ void BRRender::mainLoop()
 
 void BRRender::cleanup()
 {
+    m_asBuilder.destroy();
     m_bufferAlloc.destroy();
     m_syncMgr.destroy();
     m_commandPool.destroy();

@@ -184,6 +184,9 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
         throw std::runtime_error( "failed to create graphics pipeline!" );
     }
 
+    m_device.destroyShaderModule( vertShaderModule );
+    m_device.destroyShaderModule( fragShaderModule );
+
     DEBUG_NAME( m_graphicsPipeline, name )
 }
 
