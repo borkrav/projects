@@ -16,10 +16,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "imgui.h"
-#include "imgui_impl_glfw_vulkan.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
+
+const uint32_t WIDTH = 1920;
+const uint32_t HEIGHT = 1080;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
 #ifdef NDEBUG
@@ -114,30 +116,36 @@ void BRRender::loadModel()
 
 void BRRender::initUI()
 {
-    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    (void)io;
-    ImGui_ImplGlfwVulkan_Init_Data init_data = {};
-    init_data.allocator = nullptr;
-    init_data.gpu = AppState::instance().getPhysicalDevice();
-    init_data.device = AppState::instance().getLogicalDevice();
-    init_data.render_pass = m_renderPass.get();
-    init_data.pipeline_cache = nullptr;
-    init_data.descriptor_pool = m_descriptorPool;
-    init_data.check_vk_result = checkSuccess;
+    io.IniFilename = nullptr;  
+    io.LogFilename = nullptr;
 
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
-    // Controls
-    ImGui_ImplGlfwVulkan_Init( m_window, false, &init_data );
+    ImGui_ImplVulkan_InitInfo info = {};
+    info.Instance = AppState::instance().getInstance();
+    info.PhysicalDevice = AppState::instance().getPhysicalDevice();
+    info.Device = AppState::instance().getLogicalDevice();
+    info.QueueFamily = AppState::instance().getFamilyIndex();
+    info.Queue = AppState::instance().getGraphicsQueue();
+    info.PipelineCache = nullptr;
+    info.DescriptorPool = m_descriptorPool;
+    info.Subpass = 1;
+    info.MinImageCount = 2;
+    info.ImageCount = 3;
+    info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;  // <--- need argument?
+    info.CheckVkResultFn = checkSuccess;
+    info.Allocator = nullptr;
+
+    ImGui_ImplVulkan_Init( &info, m_renderPass.get() );
+    ImGui_ImplGlfw_InitForVulkan( m_window, true );
 
     // Setup style
     ImGui::StyleColorsDark();
 
     auto buffer = m_commandPool.beginOneTimeSubmit( "Fonts Submit Buffer" );
-    ImGui_ImplGlfwVulkan_CreateFontsTexture( buffer );
+    ImGui_ImplVulkan_CreateFontsTexture( buffer );
     m_commandPool.endOneTimeSubmit( buffer );
-    ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 void BRRender::initVulkan()
@@ -339,7 +347,8 @@ void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
 
     commandBuffer.nextSubpass( vk::SubpassContents::eInline );
 
-    ImGui_ImplGlfwVulkan_Render( commandBuffer );
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), commandBuffer );
 
     commandBuffer.endRenderPass();
 
@@ -354,6 +363,21 @@ void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
 
     // printf( "\nRecorded command buffer for image index: %d\n", imageIndex
     // );
+}
+
+void BRRender::drawUI()
+{
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGui::Begin( "Menu", NULL, ImGuiWindowFlags_AlwaysAutoResize );
+    ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)",
+                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
+
+    if ( ImGui::Button( "Screenshot" ) )
+    {
+        takeScreenshot();
+    }
+    ImGui::End();
 }
 
 void BRRender::drawFrame()
@@ -396,9 +420,7 @@ void BRRender::drawFrame()
     // Only reset the fence if we are submitting work
     result = m_device.resetFences( 1, &m_inFlightFences[m_currentFrame] );
 
-    ImGui_ImplGlfwVulkan_NewFrame();
-    ImGui::Begin( "Menu", NULL, ImGuiWindowFlags_AlwaysAutoResize );
-    ImGui::End();
+    drawUI();
 
     updateUniformBuffer( m_currentFrame );
 
@@ -653,7 +675,7 @@ void BRRender::cleanup()
     m_renderPass.destroy();
     m_descMgr.destroy();
 
-    ImGui_ImplGlfwVulkan_Shutdown();
+    ImGui_ImplVulkan_Shutdown();
     ImGui::DestroyContext();
 
     glfwDestroyWindow( m_window );

@@ -67,6 +67,7 @@ class BRRender
     std::vector<Pipeline::Vertex> m_vertices;
     std::vector<uint16_t> m_indices;
 
+
     struct UniformBufferObject
     {
         glm::mat4 model;
@@ -90,6 +91,7 @@ class BRRender
     void takeScreenshot();
 
     void initUI();
+    void drawUI();
 
     void createDescriptorSets();
     void updateUniformBuffer( uint32_t currentImage );
