@@ -210,6 +210,8 @@ void BRRender::createBLAS()
 
     m_blas = m_asBuilder.buildBlas( "BLAS", m_vertexBuffer, m_indexBuffer,
                                     maxVertex, m_indices.size() );
+
+    m_tlas = m_asBuilder.buildTlas( "TLAS", m_blas );
 }
 
 void BRRender::createDescriptorSets()

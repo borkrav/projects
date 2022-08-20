@@ -29,7 +29,6 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
 {
     //TODO: clean this up, really confusing
 
-
     //for now, identity transform
     VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f,
                                              0.0f, 1.0f, 0.0f, 0.0f,
@@ -38,8 +37,8 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     std::vector<VkTransformMatrixKHR> test;
     test.push_back( transformMatrix );
 
-    auto transformMatrixBuff = m_alloc->createAndStageBuffer(
-        "BLAS Transform", test, vk::BufferUsageFlagBits::eVertexBuffer );
+    auto transformMatrixBuff =
+        m_alloc->createAndStageBuffer( "BLAS Transform", test );
 
     vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
     vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
@@ -91,8 +90,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
 
     //allocate the blas memory
     vk::Buffer blas = m_alloc->createAccelStructureBuffer(
-        name +" Buffer", buildSizeInfo.accelerationStructureSize );
-
+        name + " Buffer", buildSizeInfo.accelerationStructureSize );
 
     vk::AccelerationStructureCreateInfoKHR createInfo;
     createInfo.buffer = blas;
@@ -109,7 +107,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
 
     //allocate scratch buffer
     vk::Buffer blasScratch = m_alloc->createScratchBuffer(
-        name +" Scratch", buildSizeInfo.buildScratchSize );
+        name + " Scratch", buildSizeInfo.buildScratchSize );
 
     auto blasScratchAddress = m_alloc->getDeviceAddress( blasScratch );
 
@@ -141,7 +139,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
                 &accelerationStructureBuildRangeInfo ) };
 
     //Finally build the BLAS...
-    auto buffer = m_pool.beginOneTimeSubmit( name +" creation" );
+    auto buffer = m_pool.beginOneTimeSubmit( name + " creation" );
     AppState::instance().vkCmdBuildAccelerationStructuresKHR(
         buffer, 1,
         reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
@@ -163,6 +161,147 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     DEBUG_NAME( handle, name );
 
     m_alloc->free( blasScratch );
+
+    return handle;
+}
+
+// for now, one blas, one tlas
+vk::AccelerationStructureKHR ASBuilder::buildTlas(
+    std::string name, vk::AccelerationStructureKHR blas )
+{
+    VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f,
+                                             0.0f, 1.0f, 0.0f, 0.0f,
+                                             0.0f, 0.0f, 1.0f, 0.0f };
+
+    vk::AccelerationStructureInstanceKHR instance;
+    instance.transform = transformMatrix;
+    instance.instanceCustomIndex = 0;
+    instance.mask = 0xFF;
+    instance.instanceShaderBindingTableRecordOffset = 0;
+    instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+    instance.accelerationStructureReference = getAddress( blas );
+
+    std::vector<VkTransformMatrixKHR> test;
+    test.push_back( transformMatrix );
+
+    VkBuffer instanceBuff =
+        m_alloc->createAndStageBuffer( "TLAS Instance", test );
+
+    vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
+    instanceDataDeviceAddress.deviceAddress =
+        m_alloc->getDeviceAddress( instanceBuff );
+
+    //geomery info
+    vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
+    accelerationStructureGeometry.geometryType =
+        vk::GeometryTypeKHR::eInstances;
+    accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
+    accelerationStructureGeometry.geometry.instances.sType =
+        vk::StructureType::eAccelerationStructureGeometryInstancesDataKHR;
+    accelerationStructureGeometry.geometry.instances.arrayOfPointers = false;
+    accelerationStructureGeometry.geometry.instances.data =
+        instanceDataDeviceAddress;
+
+    //size info
+    vk::AccelerationStructureBuildGeometryInfoKHR
+        accelerationStructureBuildGeometryInfo;
+    accelerationStructureBuildGeometryInfo.type =
+        vk::AccelerationStructureTypeKHR::eTopLevel;
+    accelerationStructureBuildGeometryInfo.flags =
+        vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+    accelerationStructureBuildGeometryInfo.geometryCount = 1;
+    accelerationStructureBuildGeometryInfo.pGeometries =
+        &accelerationStructureGeometry;
+
+    uint32_t primitive_count = 1;
+
+    VkAccelerationStructureBuildSizesInfoKHR
+        accelerationStructureBuildSizesInfo{};
+    accelerationStructureBuildSizesInfo.sType =
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+    AppState::instance().vkGetAccelerationStructureBuildSizesKHR(
+        m_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
+            &accelerationStructureBuildGeometryInfo ),
+        &primitive_count, &accelerationStructureBuildSizesInfo );
+
+    //allocate the tlas memory
+    vk::Buffer tlas = m_alloc->createAccelStructureBuffer(
+        name + " Buffer",
+        accelerationStructureBuildSizesInfo.accelerationStructureSize );
+
+    vk::AccelerationStructureCreateInfoKHR accelerationStructureCreateInfo{};
+    accelerationStructureCreateInfo.buffer = tlas;
+    accelerationStructureCreateInfo.size =
+        accelerationStructureBuildSizesInfo.accelerationStructureSize;
+    accelerationStructureCreateInfo.type =
+        vk::AccelerationStructureTypeKHR::eTopLevel;
+
+    //the resulting handle (TLAS)
+    VkAccelerationStructureKHR handle;
+
+    AppState::instance().vkCreateAccelerationStructureKHR(
+        m_device,
+        reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>(
+            &accelerationStructureCreateInfo ),
+        nullptr, &handle );
+
+    //allocate scratch buffer
+    vk::Buffer tlasScratch = m_alloc->createScratchBuffer(
+        name + " Scratch",
+        accelerationStructureBuildSizesInfo.buildScratchSize );
+
+    auto tlasScratchAddress = m_alloc->getDeviceAddress( tlasScratch );
+
+    vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
+    accelerationBuildGeometryInfo.type =
+        vk::AccelerationStructureTypeKHR::eTopLevel;
+    accelerationBuildGeometryInfo.flags =
+        vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+    accelerationBuildGeometryInfo.mode =
+        vk::BuildAccelerationStructureModeKHR::eBuild;
+    accelerationBuildGeometryInfo.dstAccelerationStructure = handle;
+    accelerationBuildGeometryInfo.geometryCount = 1;
+    accelerationBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
+    accelerationBuildGeometryInfo.scratchData.deviceAddress =
+        tlasScratchAddress;
+
+    vk::AccelerationStructureBuildRangeInfoKHR
+        accelerationStructureBuildRangeInfo;
+    accelerationStructureBuildRangeInfo.primitiveCount = 1;
+    accelerationStructureBuildRangeInfo.primitiveOffset = 0;
+    accelerationStructureBuildRangeInfo.firstVertex = 0;
+    accelerationStructureBuildRangeInfo.transformOffset = 0;
+
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR*>
+        accelerationBuildStructureRangeInfos = {
+            reinterpret_cast<VkAccelerationStructureBuildRangeInfoKHR*>(
+                &accelerationStructureBuildRangeInfo ) };
+
+    //Finally build the TLAS...
+    auto buffer = m_pool.beginOneTimeSubmit( name + " creation" );
+    AppState::instance().vkCmdBuildAccelerationStructuresKHR(
+        buffer, 1,
+        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
+            &accelerationBuildGeometryInfo ),
+        accelerationBuildStructureRangeInfos.data() );
+    m_pool.endOneTimeSubmit( buffer );
+
+    //get the TLAS hardware address, needed to build TLAS later
+    VkAccelerationStructureDeviceAddressInfoKHR bufferDeviceAI{};
+    bufferDeviceAI.sType =
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+    bufferDeviceAI.accelerationStructure = handle;
+    auto tlasAddress =
+        AppState::instance().vkGetAccelerationStructureDeviceAddressKHR(
+            m_device, &bufferDeviceAI );
+
+    m_structures.push_back( handle );
+    m_addresses[handle] = tlasAddress;
+    DEBUG_NAME( handle, name );
+
+    m_alloc->free( tlasScratch );
 
     return handle;
 }

@@ -22,7 +22,7 @@ class BufferAllocator
     template <typename T, typename A>
     vk::Buffer createAndStageBuffer( std::string name,
                                      std::vector<T, A> const& m_vertices,
-                                     vk::BufferUsageFlagBits type )
+                                     vk::BufferUsageFlagBits type = static_cast<vk::BufferUsageFlagBits>(0) )
     {
         vk::DeviceSize size = sizeof( m_vertices[0] ) * m_vertices.size();
 
@@ -41,13 +41,31 @@ class BufferAllocator
         memcpy( data, m_vertices.data(), (size_t)size );
         m_device.unmapMemory( stageMem );
 
-        auto final =
-            createBuffer( size,
-                          vk::BufferUsageFlagBits::eTransferDst | type |
+        std::pair<vk::Buffer, vk::DeviceMemory> final;
+
+        // if this has an actual type (vertex buffer, index buffer, etc)
+        if ( type != static_cast<vk::BufferUsageFlagBits>(0) )
+        {
+            final = createBuffer(
+                size,
+                vk::BufferUsageFlagBits::eTransferDst | type |
+                    vk::BufferUsageFlagBits::eShaderDeviceAddress |
+                    vk::BufferUsageFlagBits::
+                        eAccelerationStructureBuildInputReadOnlyKHR,
+                vk::MemoryPropertyFlagBits::eDeviceLocal );
+        }
+
+        // if this doesn't have a type (generic storage buffer used for TLAS/BLAS matrices)
+        else
+        {
+            final = createBuffer( size,
+                          vk::BufferUsageFlagBits::eTransferDst |
                               vk::BufferUsageFlagBits::eShaderDeviceAddress |
                               vk::BufferUsageFlagBits::
                                   eAccelerationStructureBuildInputReadOnlyKHR,
                           vk::MemoryPropertyFlagBits::eDeviceLocal );
+        }
+
         auto resultBuffer = final.first;
         auto resultMem = final.second;
 

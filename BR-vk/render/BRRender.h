@@ -70,6 +70,7 @@ class BRRender
     std::vector<uint16_t> m_indices;
 
     vk::AccelerationStructureKHR m_blas;
+    vk::AccelerationStructureKHR m_tlas;
 
     struct UniformBufferObject
     {
