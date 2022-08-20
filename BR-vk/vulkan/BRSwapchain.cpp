@@ -15,7 +15,7 @@ Swapchain::~Swapchain()
     assert( !m_swapChain && m_swapChainImageViews.empty() );
 }
 
-void Swapchain::create( GLFWwindow* window, std::string name )
+void Swapchain::create(  std::string name, GLFWwindow* window )
 {
     auto surfaceFormat = vk::SurfaceFormatKHR(
         vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear );

@@ -15,8 +15,8 @@ Device::Device()
 }
 
 //TODO surface should be it's own object
-void Device::create( const std::vector<const char*>& deviceExtensions,
-                     std::string name )
+void Device::create( std::string name,
+                     const std::vector<const char*>& deviceExtensions )
 {
     uint32_t deviceCount = 0;
 

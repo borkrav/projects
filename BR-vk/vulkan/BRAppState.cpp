@@ -32,14 +32,14 @@ void AppState::init( GLFWwindow* window, bool debug )
     const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-    m_device.create( deviceExtensions, "GPU" );
+    m_device.create( "GPU", deviceExtensions );
 
 #ifdef NDEBUG
 #else
     m_debug.create( " RTX 3080 " );
 #endif
 
-    m_swapchain.create( window, "Swapchain" );
+    m_swapchain.create( "Swapchain", window );
     m_swapchain.createImageViews( "Swapchain image view " );
 }
 
@@ -49,7 +49,7 @@ void AppState::recreateSwapchain()
     m_swapchain.destroy();
 
     //create new swapchain
-    m_swapchain.create( m_window, "Swapchain" );
+    m_swapchain.create( "Swapchain", m_window );
     m_swapchain.createImageViews( "Swapchain image view " );
 }
 

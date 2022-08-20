@@ -12,8 +12,9 @@ class CommandPool
     CommandPool();
     ~CommandPool();
 
-    void create( std::string name );
+    void create( std::string name, vk::CommandPoolCreateFlagBits flags );
     vk::CommandBuffer createBuffer( std::string name );
+    void freeBuffer( vk::CommandBuffer buffer );
     void destroy();
 
    private:

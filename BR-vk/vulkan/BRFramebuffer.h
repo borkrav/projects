@@ -15,7 +15,7 @@ class Framebuffer
     Framebuffer();
     ~Framebuffer();
 
-    void create( RenderPass& renderpass, std::string name );
+    void create( std::string name, RenderPass& renderpass  );
     void destroy();
     std::vector<vk::Framebuffer>& get();
 

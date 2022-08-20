@@ -35,7 +35,7 @@ Pipeline::~Pipeline()
     assert( !m_graphicsPipeline && !m_pipelineLayout );
 }
 
-void Pipeline::create( RenderPass& renderpass, std::string name )
+void Pipeline::create( std::string name, RenderPass& renderpass )
 {
     /*
     * Here we have a bunch of objects that define pipleline stages

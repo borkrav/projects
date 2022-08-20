@@ -15,7 +15,7 @@ Framebuffer::~Framebuffer()
     assert( m_swapChainFramebuffers.empty() );
 }
 
-void Framebuffer::create( RenderPass& renderpass, std::string name )
+void Framebuffer::create(std::string name, RenderPass& renderpass )
 {
     /*
     * The framebuffer binds the VkImageViews from the swap chain

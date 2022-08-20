@@ -63,15 +63,15 @@ void BRRender::loadModel()
     {
         BR::Pipeline::Vertex vert;
         vert.pos.x = objVertices[i];
-        vert.pos.y = objVertices[i+1];
-        vert.pos.z = objVertices[i+2];
+        vert.pos.y = objVertices[i + 1];
+        vert.pos.z = objVertices[i + 2];
 
         m_vertices.push_back( vert );
     }
 
-    for( auto shape : objShapes)
+    for ( auto shape : objShapes )
     {
-        for( auto vert : shape.mesh.indices)
+        for ( auto vert : shape.mesh.indices )
             m_indices.push_back( vert.vertex_index );
     }
 
@@ -85,9 +85,10 @@ void BRRender::initVulkan()
     m_device = AppState::instance().getLogicalDevice();
 
     m_renderPass.create( "Raster Renderpass" );
-    m_pipeline.create( m_renderPass, "Raster Pipeline" );
-    m_framebuffer.create( m_renderPass, "Swapchain Frame buffer" );
-    m_commandPool.create( "Drawing pool" );
+    m_pipeline.create( "Raster Pipeline", m_renderPass );
+    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
+    m_commandPool.create( "Drawing pool",
+                          vk::CommandPoolCreateFlagBits::eResetCommandBuffer );
 
     for ( int i : std::views::iota( 0, MAX_FRAMES_IN_FLIGHT ) )
     {
@@ -103,8 +104,10 @@ void BRRender::initVulkan()
 
     loadModel();
 
-    m_vertexBuffer = m_vboMgr.createBuffer( m_vertices );
-    m_indexBuffer = m_vboMgr.createIndexBuffer( m_indices );
+    m_vertexBuffer = m_vboMgr.createAndStageBuffer(
+        "Vertex", m_vertices, vk::BufferUsageFlagBits::eVertexBuffer );
+    m_indexBuffer = m_vboMgr.createAndStageBuffer(
+        "Index", m_indices, vk::BufferUsageFlagBits::eIndexBuffer );
 }
 
 void BRRender::recreateSwapchain()
@@ -122,7 +125,7 @@ void BRRender::recreateSwapchain()
 
     m_framebuffer.destroy();
     AppState::instance().recreateSwapchain();
-    m_framebuffer.create( m_renderPass, "Swapchain Frame buffer" );
+    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
 }
 
 void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
@@ -173,7 +176,8 @@ void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
 
     commandBuffer.bindVertexBuffers( 0, 1, vertexBuffers, offsets );
     commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
-    commandBuffer.drawIndexed(static_cast<uint32_t>(m_indices.size()), 1, 0,0,0);
+    commandBuffer.drawIndexed( static_cast<uint32_t>( m_indices.size() ), 1, 0,
+                               0, 0 );
     commandBuffer.endRenderPass();
 
     try

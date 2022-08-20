@@ -15,7 +15,7 @@ CommandPool::~CommandPool()
     assert( !m_commandPool );
 }
 
-void CommandPool::create( std::string name )
+void CommandPool::create( std::string name, vk::CommandPoolCreateFlagBits flags )
 {
     /*
     * Command pools allow concurrent recording of command buffers
@@ -24,8 +24,7 @@ void CommandPool::create( std::string name )
     m_device = AppState::instance().getLogicalDevice();
     auto familyIndex = AppState::instance().getFamilyIndex();
 
-    auto poolInfo = vk::CommandPoolCreateInfo(
-        vk::CommandPoolCreateFlagBits::eResetCommandBuffer, familyIndex );
+    auto poolInfo = vk::CommandPoolCreateInfo( flags, familyIndex );
 
     try
     {
@@ -64,6 +63,11 @@ vk::CommandBuffer CommandPool::createBuffer( std::string name )
     {
         throw std::runtime_error( "failed to allocate command buffers!" );
     }
+}
+
+void CommandPool::freeBuffer( vk::CommandBuffer buffer )
+{
+    m_device.freeCommandBuffers( m_commandPool, 1, &buffer );
 }
 
 void CommandPool::destroy()

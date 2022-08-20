@@ -12,7 +12,7 @@
 #include <BRSurface.h>
 #include <BRSwapchain.h>
 #include <BRSyncMgr.h>
-#include <BRVBOMgr.h>
+#include <BRBufferAllocator.h>
 #include <GLFW/glfw3.h>
 
 #include <array>
@@ -43,7 +43,7 @@ class BRRender
     Framebuffer m_framebuffer;
     CommandPool m_commandPool;
     SyncMgr m_syncMgr;
-    VBOMgr m_vboMgr;
+    BufferAllocator m_vboMgr;
 
     vk::Device m_device;
 
