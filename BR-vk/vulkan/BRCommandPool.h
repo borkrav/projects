@@ -14,6 +14,8 @@ class CommandPool
 
     void create( std::string name, vk::CommandPoolCreateFlagBits flags );
     vk::CommandBuffer createBuffer( std::string name );
+    vk::CommandBuffer beginOneTimeSubmit( std::string name );
+    void endOneTimeSubmit(  vk::CommandBuffer buff );
     void freeBuffer( vk::CommandBuffer buffer );
     void destroy();
 

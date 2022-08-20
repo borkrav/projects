@@ -14,9 +14,9 @@ Vulkan Renderer
 1. Split current tutorial code into distinct classes for readability/understandability. Going to get it to work on my own hardware, not going to care about the general case - DONE
 2. Write a debug annotation utility - DONE
     - write a simple GPU memory manager - read OBJ, draw the vertices  - DONE
-    - refactor the memory manager
-    - figure out transformations of your object
-
+    - refactor the memory manager - DONE
+    - figure out transformations of your object - DONE
+    - implement simple flat shading
 
     - write an image creator
     - write a pipeline generator

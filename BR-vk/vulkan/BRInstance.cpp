@@ -1,5 +1,6 @@
 #include <BRInstance.h>
-#include <Util.h>
+#include <BRUtil.h>
+#include <BRUtil.h>
 
 using namespace BR;
 
@@ -216,7 +217,7 @@ void Instance::createDebugMessenger()
             &createInfo ),
         nullptr, &m_debugMessenger );
 
-    checkSuccess( result );
+    CHECK_SUCCESS( result );
 }
 
 void Instance::destroy()

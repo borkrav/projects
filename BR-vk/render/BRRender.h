@@ -87,6 +87,8 @@ class BRRender
     void drawFrame();
     void cleanup();
 
+    void takeScreenshot();
+
 
     void createDescriptorSets();
     void updateUniformBuffer( uint32_t currentImage );

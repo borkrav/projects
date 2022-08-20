@@ -1,6 +1,6 @@
 #include <BRAppState.h>
 #include <BRSwapchain.h>
-#include <Util.h>
+#include <BRUtil.h>
 
 #include <cassert>
 
@@ -15,7 +15,7 @@ Swapchain::~Swapchain()
     assert( !m_swapChain && m_swapChainImageViews.empty() );
 }
 
-void Swapchain::create(  std::string name, GLFWwindow* window )
+void Swapchain::create( std::string name, GLFWwindow* window )
 {
     auto surfaceFormat = vk::SurfaceFormatKHR(
         vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear );
@@ -61,7 +61,8 @@ void Swapchain::create(  std::string name, GLFWwindow* window )
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = m_swapChainExtent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
+                            vk::ImageUsageFlagBits::eTransferSrc;
     createInfo.imageSharingMode = vk::SharingMode::eExclusive;
     createInfo.preTransform = capabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;

@@ -95,6 +95,15 @@ vk::SwapchainKHR AppState::getSwapchain()
     return m_swapchain.m_swapChain;
 }
 
+vk::Image AppState::getSwapchainImage( int index )
+{
+    assert( created );
+    assert( index >= 0 && index < m_swapchain.m_swapChainImages.size() );
+
+    return m_swapchain.m_swapChainImages[index];
+}
+
+
 vk::Format AppState::getSwapchainFormat()
 {
     assert( created );

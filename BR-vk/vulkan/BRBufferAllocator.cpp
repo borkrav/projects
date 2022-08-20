@@ -1,6 +1,6 @@
 #include <BRAppState.h>
 #include <BRBufferAllocator.h>
-#include <Util.h>
+#include <BRUtil.h>
 
 #include <cassert>
 
@@ -10,7 +10,6 @@ using namespace BR;
 // In production, this won't work, because of limit on number of vk::DeviceMemory
 // I may implement suballcation/memory chunks later, or use the AMD VMA library
 // For this educational renderer, the current strategy should work fine
-
 
 // Finds suitable memory for the vertex buffer
 uint32_t findMemoryType( uint32_t typeFilter,
@@ -59,7 +58,7 @@ std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
 
     vk::BufferCreateInfo bufferInfo{};
     bufferInfo.size = size;
-    bufferInfo.usage = usage;  
+    bufferInfo.usage = usage;
     bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
     try
@@ -97,7 +96,7 @@ std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
 }
 
 void BufferAllocator::copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
-                         vk::DeviceSize size )
+                                  vk::DeviceSize size )
 {
     auto familyIndex = AppState::instance().getFamilyIndex();
     auto queue = AppState::instance().getGraphicsQueue();
@@ -122,32 +121,130 @@ void BufferAllocator::copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
     m_copyPool.freeBuffer( copyBuffer );
 }
 
-
-vk::Buffer BufferAllocator::createUniformBuffer(vk::DeviceSize bufferSize)
+vk::Buffer BufferAllocator::createUniformBuffer( std::string name,
+                                                 vk::DeviceSize bufferSize )
 {
     auto result =
         createBuffer( bufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
                       vk::MemoryPropertyFlagBits::eHostVisible |
                           vk::MemoryPropertyFlagBits::eHostCoherent );
 
+    DEBUG_NAME( result.first, name );
+
     m_alloc[result.first] = result.second;
 
     return result.first;
 }
 
-vk::DeviceMemory BufferAllocator::getMemory(vk::Buffer buffer)
+vk::Image BufferAllocator::createImage( std::string name, uint32_t width,
+                                        uint32_t height, vk::Format format,
+                                        vk::ImageTiling tiling,
+                                        vk::ImageUsageFlags usage,
+                                        vk::MemoryPropertyFlags memFlags )
 {
-    assert( m_alloc.find( buffer ) != m_alloc.end() );
+    if ( !m_device )
+    {
+        m_device = AppState::instance().getLogicalDevice();
+        m_copyPool.create( "Buffer Copy Pool",
+                           vk::CommandPoolCreateFlagBits::eTransient );
+    }
 
-    return m_alloc[buffer];
+    vk::Image image = nullptr;
+    vk::DeviceMemory mem = nullptr;
+
+    vk::ImageCreateInfo imageInfo;
+    imageInfo.imageType = vk::ImageType::e2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+    imageInfo.usage = usage;
+    imageInfo.samples = vk::SampleCountFlagBits::e1;
+    imageInfo.sharingMode = vk::SharingMode::eExclusive;
+
+    try
+    {
+        image = m_device.createImage( imageInfo, nullptr );
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to create image!" );
+    }
+
+    vk::MemoryRequirements memRequirements =
+        m_device.getImageMemoryRequirements( image );
+
+    vk::MemoryAllocateInfo allocInfo{};
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex =
+        findMemoryType( memRequirements.memoryTypeBits, memFlags,
+                        AppState::instance().getPhysicalDevice() );
+
+    try
+    {
+        mem = m_device.allocateMemory( allocInfo );
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to allocate image buffer memory!" );
+    }
+
+    m_device.bindImageMemory( image, mem, 0 );
+
+    m_alloc[image] = mem;
+
+    DEBUG_NAME( image, name );
+
+    return image;
+}
+
+vk::DeviceMemory BufferAllocator::getMemory(
+    std::variant<vk::Buffer, vk::Image> buffer )
+{
+    auto it = m_alloc.find( buffer );
+
+    assert( it != m_alloc.end() );
+
+    return it->second;
+}
+
+void BufferAllocator::free( std::variant<vk::Buffer, vk::Image> buffer )
+{
+    auto it = m_alloc.find( buffer );
+    assert( it != m_alloc.end() );
+
+    auto obj = it->first;
+    auto mem = it->second;
+
+    if ( std::holds_alternative<vk::Buffer>( obj ) )
+        m_device.destroyBuffer( std::get<vk::Buffer>( obj ) );
+
+    else if ( std::holds_alternative<vk::Image>( obj ) )
+        m_device.destroyImage( std::get<vk::Image>( obj ) );
+
+    m_device.freeMemory( mem );
+
+    m_alloc.erase( it );
 }
 
 void BufferAllocator::destroy()
 {
     for ( auto alloc : m_alloc )
     {
-        m_device.destroyBuffer( alloc.first );
-        m_device.freeMemory( alloc.second );
+        auto obj = alloc.first;
+        auto mem = alloc.second;
+
+        if ( std::holds_alternative<vk::Buffer>( obj ) )
+            m_device.destroyBuffer( std::get<vk::Buffer>( obj ) );
+
+        else if ( std::holds_alternative<vk::Image>( obj ) )
+            m_device.destroyImage( std::get<vk::Image>( obj ) );
+
+        m_device.freeMemory( mem );
     }
 
     m_copyPool.destroy();

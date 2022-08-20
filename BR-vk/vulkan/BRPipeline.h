@@ -24,6 +24,7 @@ class Pipeline
     struct Vertex
     {
         glm::vec3 pos;
+        glm::vec3 norm;
 
         // This defines how to read the data
         static vk::VertexInputBindingDescription getBindingDescription()
@@ -39,15 +40,19 @@ class Pipeline
         // This describes where the vertex is and where the color is
         // type of color, type of vertex
         // location matches the location inside the shader
-        static std::array<vk::VertexInputAttributeDescription, 1>
+        static std::array<vk::VertexInputAttributeDescription, 2>
         getAttributeDescriptions()
         {
-            std::array<vk::VertexInputAttributeDescription, 1>
+            std::array<vk::VertexInputAttributeDescription, 2>
                 attributeDescriptions = {};
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
             attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
             attributeDescriptions[0].offset = offsetof( Vertex, pos );
+             attributeDescriptions[1].binding = 0;
+            attributeDescriptions[1].location = 1;
+            attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
+            attributeDescriptions[1].offset = offsetof( Vertex, norm );
 
             return attributeDescriptions;
         }

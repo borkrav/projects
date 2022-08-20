@@ -1,5 +1,5 @@
 #include <BRRender.h>
-#include <Util.h>
+#include <BRUtil.h>
 
 #include <algorithm>
 #include <cassert>
@@ -7,6 +7,8 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
+
+#include <lodepng.h>
 
 #define GLM_FORCE_RADIANS
 #include <chrono>
@@ -65,21 +67,44 @@ void BRRender::loadModel()
         reader.GetShapes();  // All shapes in the file
     assert( objShapes.size() == 1 );
 
-    for ( int i = 0; i < objVertices.size(); i += 3 )
-    {
-        BR::Pipeline::Vertex vert;
+    std::map<std::string, int> indexMap;
+    int index = 0;
 
-        vert.pos.x = objVertices[i];
-        vert.pos.y = objVertices[i + 1];
-        vert.pos.z = objVertices[i + 2];
-
-        m_vertices.push_back( vert );
-    }
+    //every combination of vertex/normal pairs must be uniquely defined
+    //data duplication cannot be avoided
 
     for ( auto shape : objShapes )
     {
         for ( auto vert : shape.mesh.indices )
-            m_indices.push_back( vert.vertex_index );
+        {
+            auto vertIndex = vert.vertex_index;
+            auto normIndex = vert.normal_index;
+
+            BR::Pipeline::Vertex vert{
+                { objVertices[vertIndex * 3], objVertices[vertIndex * 3 + 1],
+                  objVertices[vertIndex * 3 + 2] },
+                { objVertices[normIndex * 3], objVertices[normIndex * 3 + 1],
+                  objVertices[normIndex * 3 + 2] } };
+
+            //this might be slow
+            std::string vertString =
+                std::to_string( vert.pos.x ) + std::to_string( vert.pos.y ) +
+                std::to_string( vert.pos.z ) + std::to_string( vert.norm.x ) +
+                std::to_string( vert.norm.y ) + std::to_string( vert.norm.z );
+
+            auto it = indexMap.find( vertString );
+
+            if ( it == indexMap.end() )
+            {
+                m_vertices.push_back( vert );
+                m_indices.push_back( index );
+                indexMap[vertString] = index++;
+            }
+            else
+            {
+                m_indices.push_back( it->second );
+            }
+        }
     }
 
     printf( "Loaded file!\n" );
@@ -119,7 +144,7 @@ void BRRender::initVulkan()
         m_inFlightFences.emplace_back(
             m_syncMgr.createFence( "In Flight Fence for frame " + i ) );
         m_uniformBuffers.emplace_back( m_bufferAlloc.createUniformBuffer(
-            sizeof( UniformBufferObject ) ) );
+            "Uniform buffer", sizeof( UniformBufferObject ) ) );
     }
 
     loadModel();
@@ -390,6 +415,170 @@ void BRRender::drawFrame()
     m_currentFrame = ( m_currentFrame + 1 ) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void BRRender::takeScreenshot()
+{
+    printf( "taking screenshot!\n" );
+
+    auto extent = AppState::instance().getSwapchainExtent();
+    auto format = AppState::instance().getSwapchainFormat();
+
+    vk::Image srcImage =
+        AppState::instance().getSwapchainImage( m_currentFrame );
+
+    // Create Destination image for the screenshot, linear tiling (regular array, so I can copy out)
+    // Layouts is how the image is stored in VRAM, need to select the optimal layout for the operation
+    // Layouts are probably related to internal compression, where the hardware compresses the image to save
+    //      bandwidth - need to explicitely indicate that we plan to do operation X to the image, so it can be
+    //      properly accessed
+    // Basically, we tell the driver what we're planning to do with the image, and the driver ensures that
+    //      those operations are optimal, by changing the layout. What this means is up to the driver/GPU
+
+    vk::Image dstImage = m_bufferAlloc.createImage(
+        "Screenshot Destination Image", extent.width, extent.height,
+        vk::Format::eR8G8B8A8Unorm, vk::ImageTiling::eLinear,
+        vk::ImageUsageFlagBits::eTransferDst,
+        vk::MemoryPropertyFlagBits::eHostVisible |
+            vk::MemoryPropertyFlagBits::eHostCoherent );
+
+    vk::DeviceMemory dstMem = m_bufferAlloc.getMemory( dstImage );
+
+    auto cmdBuff =
+        m_commandPool.beginOneTimeSubmit( "Screenshot Command Buffer" );
+
+    //asking for color
+    vk::ImageSubresourceRange range;
+    range.aspectMask = vk::ImageAspectFlagBits::eColor;
+    range.baseMipLevel = 0;
+    range.levelCount = 1;
+    range.baseArrayLayer = 0;
+    range.layerCount = 1;
+
+    // none -> transfer write
+    // undefined -> optimal transfer destination
+    imageBarrier( cmdBuff, dstImage, range, vk::AccessFlagBits::eNone,
+                  vk::AccessFlagBits::eTransferWrite,
+                  vk::ImageLayout::eUndefined,
+                  vk::ImageLayout::eTransferDstOptimal );
+
+    // memory read -> transfer read
+    // presentation -> transfer source
+    imageBarrier( cmdBuff, srcImage, range, vk::AccessFlagBits::eMemoryRead,
+                  vk::AccessFlagBits::eTransferRead,
+                  vk::ImageLayout::ePresentSrcKHR,
+                  vk::ImageLayout::eTransferSrcOptimal );
+
+    //copy the color, width*height data
+    vk::ImageCopy imageCopy;
+    imageCopy.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+    imageCopy.srcSubresource.layerCount = 1;
+    imageCopy.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+    imageCopy.dstSubresource.layerCount = 1;
+    imageCopy.extent.width = extent.width;
+    imageCopy.extent.height = extent.height;
+    imageCopy.extent.depth = 1;
+
+    //do the actual copy
+    cmdBuff.copyImage( srcImage, vk::ImageLayout::eTransferSrcOptimal, dstImage,
+                       vk::ImageLayout::eTransferDstOptimal, imageCopy );
+
+    // transfer write -> memory read
+    // transfer destination -> general
+    imageBarrier( cmdBuff, dstImage, range, vk::AccessFlagBits::eTransferWrite,
+                  vk::AccessFlagBits::eMemoryRead,
+                  vk::ImageLayout::eTransferDstOptimal,
+                  vk::ImageLayout::eGeneral );
+
+    // transfer read -> memory read
+    // transfer source -> presentation
+    imageBarrier( cmdBuff, srcImage, range, vk::AccessFlagBits::eTransferRead,
+                  vk::AccessFlagBits::eMemoryRead,
+                  vk::ImageLayout::eTransferSrcOptimal,
+                  vk::ImageLayout::ePresentSrcKHR );
+
+    m_commandPool.endOneTimeSubmit( cmdBuff );
+
+    //get layout
+    vk::ImageSubresource subResource( vk::ImageAspectFlagBits::eColor, 0, 0 );
+    auto subResourceLayout =
+        m_device.getImageSubresourceLayout( dstImage, subResource );
+
+    //map image to host memory
+    const char* data =
+        (const char*)m_device.mapMemory( dstMem, 0, VK_WHOLE_SIZE );
+
+    data += subResourceLayout.offset;
+
+    // If source is BGR (destination is always RGB) and we can't use blit (which does automatic conversion), we'll have to manually swizzle color components
+    bool colorSwizzle = false;
+    // Check if source is BGR
+    // Note: Not complete, only contains most common and basic BGR surface formats for demonstation purposes
+
+    std::vector<vk::Format> formatsBGR = { vk::Format::eB8G8R8A8Srgb,
+                                           vk::Format::eB8G8R8A8Unorm,
+                                           vk::Format::eB8G8R8A8Snorm };
+
+    colorSwizzle = ( std::find( formatsBGR.begin(), formatsBGR.end(),
+                                format ) != formatsBGR.end() );
+
+    //fill the image vector
+    std::vector<unsigned char> image;
+
+    uint64_t w = extent.width;
+    uint64_t h = extent.height;
+
+    image.resize( w * h * 4 );
+
+    for ( uint64_t y = 0; y < h; y++ )
+    {
+        //go through data byte by byte
+        unsigned char* row = (unsigned char*)data;
+        for ( uint64_t x = 0; x < w; x++ )
+        {
+            if ( colorSwizzle )
+            {
+                image[4 * w * y + 4 * x + 0] = *( row + 2 );
+                image[4 * w * y + 4 * x + 1] = *( row + 1 );
+                image[4 * w * y + 4 * x + 2] = *( row + 0 );
+                image[4 * w * y + 4 * x + 3] = 255;
+            }
+
+            else
+            {
+                image[4 * w * y + 4 * x + 0] = *( row + 0 );
+                image[4 * w * y + 4 * x + 1] = *( row + 1 );
+                image[4 * w * y + 4 * x + 2] = *( row + 2 );
+                image[4 * w * y + 4 * x + 3] = 255;
+            }
+
+            //increment by 4 bytes (RGBA)
+            row += 4;
+        }
+        //go to next row
+        data += subResourceLayout.rowPitch;
+    }
+
+    //create filename, with current date and time
+    auto p = std::chrono::system_clock::now();
+    time_t t = std::chrono::system_clock::to_time_t( p );
+    char str[26];
+    ctime_s( str, sizeof str, &t );
+    std::string fileName = "screenshots/" + (std::string)str + ".png";
+
+    //clean up the string
+    fileName.erase( std::remove( fileName.begin(), fileName.end(), '\n' ),
+                    fileName.end() );
+    std::replace( fileName.begin(), fileName.end(), ' ', '-' );
+    std::replace( fileName.begin(), fileName.end(), ':', '-' );
+
+    //encode to PNG
+    unsigned error = lodepng::encode( fileName, image.data(), w, h );
+
+    assert( error == 0 );
+
+    m_device.unmapMemory( dstMem );
+    m_bufferAlloc.free( dstImage );
+}
+
 void BRRender::mainLoop()
 {
     while ( !glfwWindowShouldClose( m_window ) )
@@ -397,6 +586,8 @@ void BRRender::mainLoop()
         glfwPollEvents();
         drawFrame();
     }
+    //takeScreenshot();
+
     vkDeviceWaitIdle( AppState::instance().getLogicalDevice() );
 }
 

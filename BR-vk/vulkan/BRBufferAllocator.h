@@ -3,11 +3,13 @@
 #include <BRCommandPool.h>
 #include <BRDevice.h>
 #include <BRPipeline.h>
+#include <BRUtil.h>
 
 #include <map>
+#include <variant>
 #include <vector>
 #include <vulkan/vulkan_handles.hpp>
-#include <Util.h>
+
 
 namespace BR
 {
@@ -17,6 +19,7 @@ class BufferAllocator
     BufferAllocator();
     ~BufferAllocator();
 
+    //Creates a GPU buffer, copies data from CPU to staging buffer, copies from staging to final buffer
     template <typename T, typename A>
     vk::Buffer createAndStageBuffer( std::string name,
                                      std::vector<T, A> const& m_vertices,
@@ -58,12 +61,24 @@ class BufferAllocator
         return resultBuffer;
     }
 
-    vk::Buffer createUniformBuffer(vk::DeviceSize bufferSize);
-    vk::DeviceMemory getMemory(vk::Buffer);
+    //Creates a buffer for uniforms, host visible/coherent
+    vk::Buffer createUniformBuffer( std::string name,
+                                    vk::DeviceSize bufferSize );
+
+    //Creates image
+    vk::Image createImage( std::string name, uint32_t width, uint32_t height,
+                           vk::Format format, vk::ImageTiling tiling,
+                           vk::ImageUsageFlags usage,
+                           vk::MemoryPropertyFlags memFlags );
+
+    vk::DeviceMemory getMemory( std::variant<vk::Buffer, vk::Image> buffer );
+
+    void free( std::variant<vk::Buffer, vk::Image> buffer );
 
     void destroy();
 
    private:
+   // Creates a buffer on the GPU
     std::pair<vk::Buffer, vk::DeviceMemory> createBuffer(
         vk::DeviceSize size, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags properties );
@@ -71,7 +86,7 @@ class BufferAllocator
     void copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
                      vk::DeviceSize size );
 
-    std::map<vk::Buffer, vk::DeviceMemory> m_alloc;
+    std::map<std::variant<vk::Buffer, vk::Image>, vk::DeviceMemory> m_alloc;
 
     vk::Device m_device;
     CommandPool m_copyPool;

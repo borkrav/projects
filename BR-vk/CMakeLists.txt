@@ -17,6 +17,7 @@ include_directories("vulkan")
 include_directories("render")
 include_directories("third-party/imgui")
 include_directories("third-party/tinyobjloader")
+include_directories("third-party/lodepng")
 
 
 link_directories("C:/Users/Boris/dev/VulkanSDK/1.3.204.1/Lib")
@@ -28,9 +29,9 @@ FILE(GLOB main *.cpp)
 FILE(GLOB vulkan vulkan/*.cpp)
 FILE(GLOB render render/*.cpp)
 FILE(GLOB imgui third-party/imgui/*.cpp)
+FILE(GLOB lodepng third-party/lodepng/*.cpp)
 
-
-add_executable(vk-render ${main} ${vulkan} ${render} ${imgui})
+add_executable(vk-render ${main} ${vulkan} ${render} ${imgui} ${lodepng})
 target_link_libraries(vk-render vulkan-1.lib glfw3.lib)
 
 target_precompile_headers(vk-render PUBLIC "C:/Users/Boris/dev/VulkanSDK/1.3.204.1/Include/vulkan/vulkan.hpp")

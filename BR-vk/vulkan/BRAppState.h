@@ -45,6 +45,7 @@ class AppState
     int getFamilyIndex();
     vk::SurfaceKHR getSurface();
     vk::SwapchainKHR getSwapchain();
+    vk::Image getSwapchainImage( int index );
     vk::Format getSwapchainFormat();
     vk::Extent2D& getSwapchainExtent();
     std::vector<vk::ImageView>& getImageViews();

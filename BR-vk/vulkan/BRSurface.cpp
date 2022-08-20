@@ -1,6 +1,6 @@
 #include <BRAppState.h>
 #include <BRSurface.h>
-#include <Util.h>
+#include <BRUtil.h>
 
 #include <cassert>
 
@@ -19,7 +19,7 @@ void Surface::create( GLFWwindow* m_window )
 {
     VkResult result = glfwCreateWindowSurface(
         AppState::instance().getInstance(), m_window, nullptr, &m_surface );
-    checkSuccess( result );
+    CHECK_SUCCESS( result );
 
     printf( "\nCreated Surface\n" );
 }

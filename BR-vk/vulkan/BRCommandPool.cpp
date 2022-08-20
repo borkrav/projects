@@ -1,6 +1,6 @@
 #include <BRAppState.h>
 #include <BRCommandPool.h>
-#include <Util.h>
+#include <BRUtil.h>
 
 #include <cassert>
 
@@ -63,6 +63,51 @@ vk::CommandBuffer CommandPool::createBuffer( std::string name )
     {
         throw std::runtime_error( "failed to allocate command buffers!" );
     }
+}
+
+vk::CommandBuffer CommandPool::beginOneTimeSubmit( std::string name )
+{
+    assert( m_commandPool );
+
+    vk::CommandBufferAllocateInfo allocInfo(
+        m_commandPool, vk::CommandBufferLevel::ePrimary, 1 );
+
+    vk::CommandBuffer result = nullptr;
+
+    try
+    {
+        auto resultBuffs = m_device.allocateCommandBuffers( allocInfo );
+        result = resultBuffs[0];
+        DEBUG_NAME( result, name );
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to allocate command buffers!" );
+    }
+
+    vk::CommandBufferBeginInfo beginInfo(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit );
+
+    result.begin( beginInfo );
+
+    return result;
+}
+void CommandPool::endOneTimeSubmit( vk::CommandBuffer buff )
+{
+    assert( buff );
+
+    buff.end();
+
+    vk::SubmitInfo submitInfo;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &buff;
+
+    auto queue = AppState::instance().getGraphicsQueue();
+
+    queue.submit( submitInfo );
+    queue.waitIdle();
+
+    m_device.freeCommandBuffers( m_commandPool, 1, &buff );
 }
 
 void CommandPool::freeBuffer( vk::CommandBuffer buffer )
