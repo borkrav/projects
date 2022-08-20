@@ -22,13 +22,6 @@ class BufferAllocator
                                      std::vector<T, A> const& m_vertices,
                                      vk::BufferUsageFlagBits type )
     {
-        if ( !m_device )
-        {
-            m_device = AppState::instance().getLogicalDevice();
-            m_copyPool.create( "Buffer Copy Pool",
-                               vk::CommandPoolCreateFlagBits::eTransient );
-        }
-
         vk::DeviceSize size = sizeof( m_vertices[0] ) * m_vertices.size();
 
         auto stage =
@@ -64,6 +57,9 @@ class BufferAllocator
 
         return resultBuffer;
     }
+
+    vk::Buffer createUniformBuffer(vk::DeviceSize bufferSize);
+    vk::DeviceMemory getMemory(vk::Buffer);
 
     void destroy();
 

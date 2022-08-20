@@ -3,6 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 
 #include <BRAppState.h>
+#include <BRBufferAllocator.h>
 #include <BRCommandPool.h>
 #include <BRDevice.h>
 #include <BRFramebuffer.h>
@@ -12,7 +13,7 @@
 #include <BRSurface.h>
 #include <BRSwapchain.h>
 #include <BRSyncMgr.h>
-#include <BRBufferAllocator.h>
+#include <BRDescMgr.h>
 #include <GLFW/glfw3.h>
 
 #include <array>
@@ -43,7 +44,8 @@ class BRRender
     Framebuffer m_framebuffer;
     CommandPool m_commandPool;
     SyncMgr m_syncMgr;
-    BufferAllocator m_vboMgr;
+    BufferAllocator m_bufferAlloc;
+    DescMgr m_descMgr;
 
     vk::Device m_device;
 
@@ -55,18 +57,22 @@ class BRRender
     vk::Buffer m_vertexBuffer;
     vk::Buffer m_indexBuffer;
 
+    vk::DescriptorSetLayout m_descriptorSetLayout;
+    vk::DescriptorPool m_descriptorPool;
+    std::vector<vk::DescriptorSet> m_descriptorSets;
+    std::vector<vk::Buffer> m_uniformBuffers;
+
     int m_currentFrame = 0;
-
-    // const std::vector<Pipeline::Vertex> m_vertices = {
-    //     { { -0.5f, -0.5f, 0.0f } },
-    //     { { 0.5f, -0.5f, 0.0f } },
-    //     { { 0.5f, 0.5f, 0.0f } },
-    //     { { -0.5f, 0.5f, 0.0f } } };
-
-    // const std::vector<uint16_t> m_indices = { 0, 1, 2, 2, 3, 0 };
 
     std::vector<Pipeline::Vertex> m_vertices;
     std::vector<uint16_t> m_indices;
+
+    struct UniformBufferObject
+    {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    };
 
     void initWindow();
     void initVulkan();
@@ -80,6 +86,10 @@ class BRRender
     void mainLoop();
     void drawFrame();
     void cleanup();
+
+
+    void createDescriptorSets();
+    void updateUniformBuffer( uint32_t currentImage );
 };
 
 }  // namespace BR

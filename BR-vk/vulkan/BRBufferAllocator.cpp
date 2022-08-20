@@ -47,12 +47,19 @@ std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
     vk::DeviceSize size, vk::BufferUsageFlags usage,
     vk::MemoryPropertyFlags properties )
 {
+    if ( !m_device )
+    {
+        m_device = AppState::instance().getLogicalDevice();
+        m_copyPool.create( "Buffer Copy Pool",
+                           vk::CommandPoolCreateFlagBits::eTransient );
+    }
+
     vk::Buffer buffer = nullptr;
     vk::DeviceMemory mem = nullptr;
 
     vk::BufferCreateInfo bufferInfo{};
     bufferInfo.size = size;
-    bufferInfo.usage = usage;
+    bufferInfo.usage = usage;  
     bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
     try
@@ -115,6 +122,25 @@ void BufferAllocator::copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
     m_copyPool.freeBuffer( copyBuffer );
 }
 
+
+vk::Buffer BufferAllocator::createUniformBuffer(vk::DeviceSize bufferSize)
+{
+    auto result =
+        createBuffer( bufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
+                      vk::MemoryPropertyFlagBits::eHostVisible |
+                          vk::MemoryPropertyFlagBits::eHostCoherent );
+
+    m_alloc[result.first] = result.second;
+
+    return result.first;
+}
+
+vk::DeviceMemory BufferAllocator::getMemory(vk::Buffer buffer)
+{
+    assert( m_alloc.find( buffer ) != m_alloc.end() );
+
+    return m_alloc[buffer];
+}
 
 void BufferAllocator::destroy()
 {

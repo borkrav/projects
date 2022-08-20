@@ -8,6 +8,12 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#define GLM_FORCE_RADIANS
+#include <chrono>
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -62,6 +68,7 @@ void BRRender::loadModel()
     for ( int i = 0; i < objVertices.size(); i += 3 )
     {
         BR::Pipeline::Vertex vert;
+
         vert.pos.x = objVertices[i];
         vert.pos.y = objVertices[i + 1];
         vert.pos.z = objVertices[i + 2];
@@ -85,7 +92,18 @@ void BRRender::initVulkan()
     m_device = AppState::instance().getLogicalDevice();
 
     m_renderPass.create( "Raster Renderpass" );
-    m_pipeline.create( "Raster Pipeline", m_renderPass );
+
+    m_descriptorSetLayout = m_descMgr.createLayout(
+        "UBO layout", std::vector<BR::DescMgr::Binding>{
+                          { 0, vk::DescriptorType::eUniformBuffer, 1,
+                            vk::ShaderStageFlagBits::eVertex } } );
+
+    m_descriptorPool = m_descMgr.createPool(
+        "UBO pool", MAX_FRAMES_IN_FLIGHT,
+        std::vector<BR::DescMgr::PoolSize>{
+            { vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT } } );
+
+    m_pipeline.create( "Raster Pipeline", m_renderPass, m_descriptorSetLayout );
     m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
     m_commandPool.create( "Drawing pool",
                           vk::CommandPoolCreateFlagBits::eResetCommandBuffer );
@@ -100,14 +118,49 @@ void BRRender::initVulkan()
             "Render Finish Semaphore for frame " + i ) );
         m_inFlightFences.emplace_back(
             m_syncMgr.createFence( "In Flight Fence for frame " + i ) );
+        m_uniformBuffers.emplace_back( m_bufferAlloc.createUniformBuffer(
+            sizeof( UniformBufferObject ) ) );
     }
 
     loadModel();
 
-    m_vertexBuffer = m_vboMgr.createAndStageBuffer(
+    m_vertexBuffer = m_bufferAlloc.createAndStageBuffer(
         "Vertex", m_vertices, vk::BufferUsageFlagBits::eVertexBuffer );
-    m_indexBuffer = m_vboMgr.createAndStageBuffer(
+    m_indexBuffer = m_bufferAlloc.createAndStageBuffer(
         "Index", m_indices, vk::BufferUsageFlagBits::eIndexBuffer );
+
+    createDescriptorSets();
+}
+
+void BRRender::createDescriptorSets()
+{
+    m_descriptorSets.push_back( m_descMgr.createSet(
+        "Frame 1 Desc set", m_descriptorSetLayout, m_descriptorPool ) );
+    m_descriptorSets.push_back( m_descMgr.createSet(
+        "Frame 2 Desc set", m_descriptorSetLayout, m_descriptorPool ) );
+
+    for ( int i : std::views::iota( 0, MAX_FRAMES_IN_FLIGHT ) )
+    {
+        vk::DescriptorBufferInfo bufferInfo;
+        bufferInfo.buffer = m_uniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof( UniformBufferObject );
+
+        vk::WriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = vk::StructureType::eWriteDescriptorSet;
+        descriptorWrite.dstSet = m_descriptorSets[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrite.descriptorCount = 1;
+
+        descriptorWrite.pBufferInfo = &bufferInfo;
+        descriptorWrite.pImageInfo = nullptr;        // Optional
+        descriptorWrite.pTexelBufferView = nullptr;  // Optional
+
+        vkUpdateDescriptorSets(
+            m_device, 1, (VkWriteDescriptorSet*)&descriptorWrite, 0, nullptr );
+    }
 }
 
 void BRRender::recreateSwapchain()
@@ -126,6 +179,38 @@ void BRRender::recreateSwapchain()
     m_framebuffer.destroy();
     AppState::instance().recreateSwapchain();
     m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
+}
+
+void BRRender::updateUniformBuffer( uint32_t currentImage )
+{
+    auto extent = AppState::instance().getSwapchainExtent();
+
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(
+                     currentTime - startTime )
+                     .count();
+
+    UniformBufferObject ubo{};
+    ubo.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ),
+                             glm::vec3( 0.0f, 0.0f, 1.0f ) );
+
+    ubo.view = glm::lookAt( glm::vec3( 2.0f, 2.0f, 2.0f ),
+                            glm::vec3( 0.0f, 0.0f, 0.0f ),
+                            glm::vec3( 0.0f, 0.0f, 1.0f ) );
+
+    ubo.proj =
+        glm::perspective( glm::radians( 45.0f ),
+                          extent.width / (float)extent.height, 0.1f, 10.0f );
+
+    ubo.proj[1][1] *= -1;
+
+    auto mem = m_bufferAlloc.getMemory( m_uniformBuffers[currentImage] );
+
+    void* data = m_device.mapMemory( mem, 0, sizeof( ubo ) );
+    memcpy( data, &ubo, sizeof( ubo ) );
+    m_device.unmapMemory( mem );
 }
 
 void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
@@ -176,6 +261,11 @@ void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
 
     commandBuffer.bindVertexBuffers( 0, 1, vertexBuffers, offsets );
     commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
+
+    vkCmdBindDescriptorSets(
+        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.getLayout(),
+        0, 1, (VkDescriptorSet*)&m_descriptorSets[m_currentFrame], 0, nullptr );
+
     commandBuffer.drawIndexed( static_cast<uint32_t>( m_indices.size() ), 1, 0,
                                0, 0 );
     commandBuffer.endRenderPass();
@@ -232,6 +322,8 @@ void BRRender::drawFrame()
 
     // Only reset the fence if we are submitting work
     result = m_device.resetFences( 1, &m_inFlightFences[m_currentFrame] );
+
+    updateUniformBuffer( m_currentFrame );
 
     m_commandBuffers[m_currentFrame].reset();
     recordCommandBuffer( m_commandBuffers[m_currentFrame], imageIndex );
@@ -310,12 +402,13 @@ void BRRender::mainLoop()
 
 void BRRender::cleanup()
 {
-    m_vboMgr.destroy();
+    m_bufferAlloc.destroy();
     m_syncMgr.destroy();
     m_commandPool.destroy();
     m_framebuffer.destroy();
     m_pipeline.destroy();
     m_renderPass.destroy();
+    m_descMgr.destroy();
 
     glfwDestroyWindow( m_window );
     glfwTerminate();

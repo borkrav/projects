@@ -35,7 +35,8 @@ Pipeline::~Pipeline()
     assert( !m_graphicsPipeline && !m_pipelineLayout );
 }
 
-void Pipeline::create( std::string name, RenderPass& renderpass )
+void Pipeline::create( std::string name, RenderPass& renderpass,
+                       vk::DescriptorSetLayout layout )
 {
     /*
     * Here we have a bunch of objects that define pipleline stages
@@ -111,7 +112,7 @@ void Pipeline::create( std::string name, RenderPass& renderpass )
     rasterizer.polygonMode = vk::PolygonMode::eFill;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = vk::CullModeFlagBits::eBack;
-    rasterizer.frontFace = vk::FrontFace::eClockwise;
+    rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
     rasterizer.depthBiasEnable = VK_FALSE;
 
     vk::PipelineMultisampleStateCreateInfo multisampling = {};
@@ -135,7 +136,8 @@ void Pipeline::create( std::string name, RenderPass& renderpass )
     colorBlending.blendConstants[3] = 0.0f;
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {};
-    pipelineLayoutInfo.setLayoutCount = 0;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &layout;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
     try
@@ -189,4 +191,10 @@ vk::Pipeline Pipeline::get()
 {
     assert( m_graphicsPipeline );
     return m_graphicsPipeline;
+}
+
+vk::PipelineLayout Pipeline::getLayout()
+{
+    assert( m_pipelineLayout );
+    return m_pipelineLayout;
 }

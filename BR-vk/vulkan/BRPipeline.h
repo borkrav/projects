@@ -16,9 +16,10 @@ class Pipeline
     Pipeline();
     ~Pipeline();
 
-    void create( std::string name, RenderPass& renderpass  );
+    void create( std::string name, RenderPass& renderpass, vk::DescriptorSetLayout layout );
     void destroy();
     vk::Pipeline get();
+    vk::PipelineLayout getLayout();
 
     struct Vertex
     {
@@ -45,7 +46,7 @@ class Pipeline
                 attributeDescriptions = {};
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
-            attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
+            attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
             attributeDescriptions[0].offset = offsetof( Vertex, pos );
 
             return attributeDescriptions;
