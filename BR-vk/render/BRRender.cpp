@@ -6,15 +6,17 @@
 #include <ranges>
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
-
 #include <lodepng.h>
+#include <tiny_obj_loader.h>
 
 #define GLM_FORCE_RADIANS
 #include <chrono>
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "imgui.h"
+#include "imgui_impl_glfw_vulkan.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -110,6 +112,34 @@ void BRRender::loadModel()
     printf( "Loaded file!\n" );
 }
 
+void BRRender::initUI()
+{
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+    ImGui_ImplGlfwVulkan_Init_Data init_data = {};
+    init_data.allocator = nullptr;
+    init_data.gpu = AppState::instance().getPhysicalDevice();
+    init_data.device = AppState::instance().getLogicalDevice();
+    init_data.render_pass = m_renderPass.get();
+    init_data.pipeline_cache = nullptr;
+    init_data.descriptor_pool = m_descriptorPool;
+    init_data.check_vk_result = checkSuccess;
+
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
+    // Controls
+    ImGui_ImplGlfwVulkan_Init( m_window, false, &init_data );
+
+    // Setup style
+    ImGui::StyleColorsDark();
+
+    auto buffer = m_commandPool.beginOneTimeSubmit( "Fonts Submit Buffer" );
+    ImGui_ImplGlfwVulkan_CreateFontsTexture( buffer );
+    m_commandPool.endOneTimeSubmit( buffer );
+    ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
+}
+
 void BRRender::initVulkan()
 {
     AppState::instance().init( m_window, enableValidationLayers );
@@ -124,9 +154,11 @@ void BRRender::initVulkan()
                             vk::ShaderStageFlagBits::eVertex } } );
 
     m_descriptorPool = m_descMgr.createPool(
-        "UBO pool", MAX_FRAMES_IN_FLIGHT,
+        "Descriptor pool", 1000,
         std::vector<BR::DescMgr::PoolSize>{
-            { vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT } } );
+            { vk::DescriptorType::eUniformBuffer, 1000 },
+            { vk::DescriptorType::eCombinedImageSampler, 1000 },
+            { vk::DescriptorType::eStorageBuffer, 1000 } } );
 
     m_pipeline.create( "Raster Pipeline", m_renderPass, m_descriptorSetLayout );
     m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
@@ -155,6 +187,8 @@ void BRRender::initVulkan()
         "Index", m_indices, vk::BufferUsageFlagBits::eIndexBuffer );
 
     createDescriptorSets();
+
+    initUI();
 }
 
 void BRRender::createDescriptorSets()
@@ -281,6 +315,15 @@ void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
     commandBuffer.bindPipeline( vk::PipelineBindPoint::eGraphics,
                                 m_pipeline.get() );
 
+    // set the dynamic state for the pipeline
+    // this enables resizing of the window to work properly
+    vk::Viewport viewport( 0.0f, 0.0f, extent.width, extent.height, 0.0f,
+                           1.0f );
+    vk::Rect2D scissor( { 0, 0 }, extent );
+
+    commandBuffer.setViewport( 0, viewport );
+    commandBuffer.setScissor( 0, scissor );
+
     vk::Buffer vertexBuffers[] = { m_vertexBuffer };
     vk::DeviceSize offsets[] = { 0 };
 
@@ -293,6 +336,11 @@ void BRRender::recordCommandBuffer( vk::CommandBuffer commandBuffer,
 
     commandBuffer.drawIndexed( static_cast<uint32_t>( m_indices.size() ), 1, 0,
                                0, 0 );
+
+    commandBuffer.nextSubpass( vk::SubpassContents::eInline );
+
+    ImGui_ImplGlfwVulkan_Render( commandBuffer );
+
     commandBuffer.endRenderPass();
 
     try
@@ -347,6 +395,10 @@ void BRRender::drawFrame()
 
     // Only reset the fence if we are submitting work
     result = m_device.resetFences( 1, &m_inFlightFences[m_currentFrame] );
+
+    ImGui_ImplGlfwVulkan_NewFrame();
+    ImGui::Begin( "Menu", NULL, ImGuiWindowFlags_AlwaysAutoResize );
+    ImGui::End();
 
     updateUniformBuffer( m_currentFrame );
 
@@ -600,6 +652,9 @@ void BRRender::cleanup()
     m_pipeline.destroy();
     m_renderPass.destroy();
     m_descMgr.destroy();
+
+    ImGui_ImplGlfwVulkan_Shutdown();
+    ImGui::DestroyContext();
 
     glfwDestroyWindow( m_window );
     glfwTerminate();

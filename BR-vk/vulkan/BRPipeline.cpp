@@ -1,9 +1,9 @@
 #include <BRAppState.h>
 #include <BRPipeline.h>
 #include <BRUtil.h>
-#include <filesystem>
 
 #include <cassert>
+#include <filesystem>
 #include <iostream>
 
 using namespace BR;
@@ -152,6 +152,13 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
 
     DEBUG_NAME( m_pipelineLayout, name + "layout" );
 
+    std::vector<vk::DynamicState> dynamicStates{ vk::DynamicState::eScissor,
+                                                 vk::DynamicState::eViewport };
+
+    vk::PipelineDynamicStateCreateInfo dynamicInfo;
+    dynamicInfo.dynamicStateCount = 2;
+    dynamicInfo.pDynamicStates = dynamicStates.data();
+
     vk::GraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.stageCount = 2;
     pipelineInfo.pStages = shaderStages;
@@ -165,6 +172,7 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
     pipelineInfo.renderPass = renderpass.get();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = nullptr;
+    pipelineInfo.pDynamicState = &dynamicInfo;
 
     try
     {
