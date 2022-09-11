@@ -190,10 +190,101 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
     DEBUG_NAME( m_graphicsPipeline, name )
 }
 
+void Pipeline::createRT( std::string name,
+                         vk::DescriptorSetLayout descriptorSetLayout )
+{
+    vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+
+    m_rtPipelineLayout = m_device.createPipelineLayout( pipelineLayoutInfo );
+    DEBUG_NAME( m_rtPipelineLayout, "RT Pipeline Layout" );
+
+    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups;
+
+    auto raygenCode = readFile( "build/shaders/raygen.rgen.spv" );
+    auto missCode = readFile( "build/shaders/miss.rmiss.spv" );
+    auto closesthitCode = readFile( "build/shaders/closesthit.rchit.spv" );
+
+    m_device = AppState::instance().getLogicalDevice();
+
+    vk::ShaderModule raygenModule = createShaderModule( m_device, raygenCode );
+    vk::ShaderModule missModule = createShaderModule( m_device, missCode );
+    vk::ShaderModule closesthitModule =
+        createShaderModule( m_device, closesthitCode );
+
+    vk::PipelineShaderStageCreateInfo shaderStages[] = {
+        { vk::PipelineShaderStageCreateFlags(),
+          vk::ShaderStageFlagBits::eRaygenKHR, raygenModule, "main" },
+        { vk::PipelineShaderStageCreateFlags(),
+          vk::ShaderStageFlagBits::eMissKHR, missModule, "main" },
+        { vk::PipelineShaderStageCreateFlags(),
+          vk::ShaderStageFlagBits::eClosestHitKHR, closesthitModule, "main" } };
+
+    // Ray generation group
+    {
+        vk::RayTracingShaderGroupCreateInfoKHR shaderGroup;
+        shaderGroup.type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
+        shaderGroup.generalShader = 0;
+        shaderGroup.closestHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+        shaderGroups.push_back( shaderGroup );
+    }
+
+    // Miss group
+    {
+        vk::RayTracingShaderGroupCreateInfoKHR shaderGroup;
+        shaderGroup.type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
+        shaderGroup.generalShader = 1;
+        shaderGroup.closestHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+        shaderGroups.push_back( shaderGroup );
+    }
+
+    // Closest hit group
+    {
+        vk::RayTracingShaderGroupCreateInfoKHR shaderGroup;
+        shaderGroup.type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup;
+        shaderGroup.generalShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.closestHitShader = 2;
+        shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+        shaderGroups.push_back( shaderGroup );
+    }
+
+    vk::RayTracingPipelineCreateInfoKHR rayTracingPipelineInfo;
+    rayTracingPipelineInfo.stageCount = 3;
+    rayTracingPipelineInfo.pStages = shaderStages;
+    rayTracingPipelineInfo.groupCount =
+        static_cast<uint32_t>( shaderGroups.size() );
+    rayTracingPipelineInfo.pGroups = shaderGroups.data();
+    rayTracingPipelineInfo.maxPipelineRayRecursionDepth = 1;
+    rayTracingPipelineInfo.layout = m_rtPipelineLayout;
+
+    auto result = AppState::instance().vkCreateRayTracingPipelinesKHR(
+        m_device, VK_NULL_HANDLE, VK_NULL_HANDLE, 1,
+        reinterpret_cast<VkRayTracingPipelineCreateInfoKHR*>(
+            &rayTracingPipelineInfo ),
+        nullptr, reinterpret_cast<VkPipeline*>( &m_rtPipeline ) );
+
+    checkSuccess( result );
+
+    DEBUG_NAME( m_rtPipeline, name );
+
+    m_device.destroyShaderModule( raygenModule );
+    m_device.destroyShaderModule( missModule );
+    m_device.destroyShaderModule( closesthitModule );
+}
+
 void Pipeline::destroy()
 {
     m_device.destroyPipeline( m_graphicsPipeline );
     m_device.destroyPipelineLayout( m_pipelineLayout );
+
+    m_device.destroyPipeline( m_rtPipeline );
+    m_device.destroyPipelineLayout( m_rtPipelineLayout );
 
     m_graphicsPipeline = nullptr;
     m_pipelineLayout = nullptr;
@@ -205,8 +296,20 @@ vk::Pipeline Pipeline::get()
     return m_graphicsPipeline;
 }
 
+vk::Pipeline Pipeline::getRT()
+{
+    assert( m_rtPipeline );
+    return m_rtPipeline;
+}
+
 vk::PipelineLayout Pipeline::getLayout()
 {
     assert( m_pipelineLayout );
     return m_pipelineLayout;
+}
+
+vk::PipelineLayout Pipeline::getRTLayout()
+{
+    assert( m_rtPipelineLayout );
+    return m_rtPipelineLayout;
 }

@@ -62,4 +62,10 @@ inline void imageBarrier( vk::CommandBuffer commandBuffer, vk::Image image,
         reinterpret_cast<VkImageMemoryBarrier*>( &imageMemoryBarrier ) );
 }
 
+//TODO: Understand what this does, why is this needed
+inline uint32_t alignedSize( uint32_t value, uint32_t alignment )
+{
+    return ( value + alignment - 1 ) & ~( alignment - 1 );
+}
+
 }  // namespace BR

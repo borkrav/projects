@@ -69,8 +69,17 @@ class BRRender
     std::vector<Pipeline::Vertex> m_vertices;
     std::vector<uint16_t> m_indices;
 
+    //Ray-Tracing related things
     vk::AccelerationStructureKHR m_blas;
     vk::AccelerationStructureKHR m_tlas;
+    vk::DescriptorSetLayout m_rtDescriptorSetLayout;
+    std::vector<vk::DescriptorSet> m_rtDescriptorSets;
+
+    vk::Buffer m_raygenSBT;
+    vk::Buffer m_missSBT;
+    vk::Buffer m_hitSBT;
+
+    bool m_rtMode = false;
 
     struct UniformBufferObject
     {
@@ -87,8 +96,14 @@ class BRRender
 
     void recreateSwapchain();
 
-    void recordCommandBuffer( vk::CommandBuffer commandBuffer,
+    void recordRasterCommandBuffer( vk::CommandBuffer commandBuffer,
                               uint32_t imageIndex );
+
+    void recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
+                                uint32_t imageIndex );
+
+    void setRTRenderTarget( uint32_t imageIndex );
+
     void mainLoop();
     void drawFrame();
     void cleanup();
@@ -96,12 +111,16 @@ class BRRender
     void takeScreenshot();
 
     void initUI();
-    void createBLAS();
+
     void drawUI();
     uint64_t getBufferDeviceAddress( VkBuffer buffer );
 
     void createDescriptorSets();
     void updateUniformBuffer( uint32_t currentImage );
+
+    void createAS();
+    void createSBT();
+    void createRTDescriptorSets();
 };
 
 }  // namespace BR

@@ -86,6 +86,10 @@ class BufferAllocator
     vk::Buffer createUniformBuffer( std::string name,
                                     vk::DeviceSize bufferSize );
 
+    //Creates a generic buffer
+    vk::Buffer createVisibleBuffer( std::string name, vk::DeviceSize bufferSize,
+                                    vk::BufferUsageFlags usage, void* data );
+
     //Creates image
     vk::Image createImage( std::string name, uint32_t width, uint32_t height,
                            vk::Format format, vk::ImageTiling tiling,

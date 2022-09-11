@@ -16,10 +16,15 @@ class Pipeline
     Pipeline();
     ~Pipeline();
 
-    void create( std::string name, RenderPass& renderpass, vk::DescriptorSetLayout layout );
+    void create( std::string name, RenderPass& renderpass,
+                 vk::DescriptorSetLayout layout );
+    void createRT( std::string name,
+                   vk::DescriptorSetLayout descriptorSetLayout );
     void destroy();
     vk::Pipeline get();
+    vk::Pipeline getRT();
     vk::PipelineLayout getLayout();
+    vk::PipelineLayout getRTLayout();
 
     struct Vertex
     {
@@ -49,7 +54,7 @@ class Pipeline
             attributeDescriptions[0].location = 0;
             attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
             attributeDescriptions[0].offset = offsetof( Vertex, pos );
-             attributeDescriptions[1].binding = 0;
+            attributeDescriptions[1].binding = 0;
             attributeDescriptions[1].location = 1;
             attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
             attributeDescriptions[1].offset = offsetof( Vertex, norm );
@@ -61,6 +66,8 @@ class Pipeline
    private:
     vk::PipelineLayout m_pipelineLayout;
     vk::Pipeline m_graphicsPipeline;
+    vk::PipelineLayout m_rtPipelineLayout;
+    vk::Pipeline m_rtPipeline;
     vk::Device m_device;
 };
 }  // namespace BR

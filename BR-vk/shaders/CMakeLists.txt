@@ -1,8 +1,11 @@
-set(GLSL_VALIDATOR "glslc")
+set(GLSL_VALIDATOR "${PROJECT_SOURCE_DIR}/third-party/glslang/bin/glslangValidator.exe")
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "*.frag"
     "*.vert"
+    "*.rgen"
+    "*.rmiss"
+    "*.rchit"
     )
 
 foreach(GLSL ${GLSL_SOURCE_FILES})
@@ -11,7 +14,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     add_custom_command(
       OUTPUT ${SPIRV}
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
-      COMMAND ${GLSL_VALIDATOR} ${GLSL} -o ${SPIRV}
+      COMMAND ${GLSL_VALIDATOR} --target-env vulkan1.3 -V -o ${SPIRV} ${GLSL}
       DEPENDS ${GLSL})
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})
 endforeach(GLSL)

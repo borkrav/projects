@@ -100,10 +100,12 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     //The resulting handle
     VkAccelerationStructureKHR handle;
 
-    AppState::instance().vkCreateAccelerationStructureKHR(
+    auto result = AppState::instance().vkCreateAccelerationStructureKHR(
         m_device,
         reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>( &createInfo ),
         nullptr, &handle );
+
+    checkSuccess( result );
 
     //allocate scratch buffer
     vk::Buffer blasScratch = m_alloc->createScratchBuffer(
@@ -145,6 +147,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
         reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
             &accelerationBuildGeometryInfo ),
         accelerationBuildStructureRangeInfos.data() );
+
     m_pool.endOneTimeSubmit( buffer );
 
     //get the BLAS hardware address, needed to build TLAS later
@@ -241,11 +244,13 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     //the resulting handle (TLAS)
     VkAccelerationStructureKHR handle;
 
-    AppState::instance().vkCreateAccelerationStructureKHR(
+    auto result = AppState::instance().vkCreateAccelerationStructureKHR(
         m_device,
         reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>(
             &accelerationStructureCreateInfo ),
         nullptr, &handle );
+
+    checkSuccess( result );
 
     //allocate scratch buffer
     vk::Buffer tlasScratch = m_alloc->createScratchBuffer(

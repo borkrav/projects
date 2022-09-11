@@ -249,6 +249,29 @@ vk::Buffer BufferAllocator::createScratchBuffer( std::string name,
     return buff;
 }
 
+vk::Buffer BufferAllocator::createVisibleBuffer( std::string name,
+                                                 vk::DeviceSize size,
+                                                 vk::BufferUsageFlags usage,
+                                                 void* data )
+{
+    auto result = createBuffer( size, usage,
+                                vk::MemoryPropertyFlagBits::eHostVisible |
+                                    vk::MemoryPropertyFlagBits::eHostCoherent );
+
+    auto buff = result.first;
+    auto mem = result.second;
+
+    m_alloc[buff] = mem;
+
+    DEBUG_NAME( buff, name );
+
+    void* dst = m_device.mapMemory( mem, 0, size );
+    memcpy( data, dst, size );
+    m_device.unmapMemory( mem );
+
+    return buff;
+}
+
 vk::DeviceMemory BufferAllocator::getMemory(
     std::variant<vk::Buffer, vk::Image> buffer )
 {

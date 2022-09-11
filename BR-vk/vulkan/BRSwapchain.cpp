@@ -17,8 +17,9 @@ Swapchain::~Swapchain()
 
 void Swapchain::create( std::string name, GLFWwindow* window )
 {
+
     auto surfaceFormat = vk::SurfaceFormatKHR(
-        vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear );
+        vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear );
 
     m_swapChainFormat = surfaceFormat.format;
 
@@ -62,7 +63,7 @@ void Swapchain::create( std::string name, GLFWwindow* window )
     createInfo.imageExtent = m_swapChainExtent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
-                            vk::ImageUsageFlagBits::eTransferSrc;
+                            vk::ImageUsageFlagBits::eTransferSrc |vk::ImageUsageFlagBits::eStorage;
     createInfo.imageSharingMode = vk::SharingMode::eExclusive;
     createInfo.preTransform = capabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
