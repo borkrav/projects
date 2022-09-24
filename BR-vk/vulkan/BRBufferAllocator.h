@@ -92,6 +92,10 @@ class BufferAllocator
     vk::Buffer createVisibleBuffer( std::string name, vk::DeviceSize bufferSize,
                                     vk::BufferUsageFlags usage, void* data );
 
+    //Update a generic buffer ( memcpy data in )
+    void updateVisibleBuffer( vk::Buffer buff, vk::DeviceSize size,
+                              void* data );
+
     //Creates image
     vk::Image createImage( std::string name, uint32_t width, uint32_t height,
                            vk::Format format, vk::ImageTiling tiling,

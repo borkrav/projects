@@ -189,15 +189,18 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
     instance.accelerationStructureReference = getAddress( blas );
 
-    std::vector<vk::AccelerationStructureInstanceKHR> instances;
-    instances.push_back( instance );
+    vk::BufferUsageFlags flags =
+        vk::BufferUsageFlagBits::eTransferDst |
+        vk::BufferUsageFlagBits::eShaderDeviceAddress |
+        vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
 
-    VkBuffer instanceBuff =
-        m_alloc->createAndStageBuffer( "TLAS Instance", instances );
+    m_instanceBuff = m_alloc->createVisibleBuffer(
+        name + " instance buffer",
+        sizeof( vk::AccelerationStructureInstanceKHR ), flags, &instance );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =
-        m_alloc->getDeviceAddress( instanceBuff );
+        m_alloc->getDeviceAddress( m_instanceBuff );
 
     //geomery
     vk::AccelerationStructureGeometryKHR geometry;
@@ -212,7 +215,8 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     vk::AccelerationStructureBuildGeometryInfoKHR geometryInfo;
     geometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
     geometryInfo.flags =
-        vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+        vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace |
+        vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
     geometryInfo.geometryCount = 1;
     geometryInfo.pGeometries = &geometry;
 
@@ -256,14 +260,15 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     checkSuccess( result );
 
     //allocate scratch buffer
-    vk::Buffer tlasScratch = m_alloc->createScratchBuffer(
-        name + " Scratch", sizeInfo.buildScratchSize );
+    m_tlasScratch = m_alloc->createScratchBuffer( name + " Scratch",
+                                                  sizeInfo.buildScratchSize );
 
-    auto tlasScratchAddress = m_alloc->getDeviceAddress( tlasScratch );
+    auto tlasScratchAddress = m_alloc->getDeviceAddress( m_tlasScratch );
 
     vk::AccelerationStructureBuildGeometryInfoKHR asInfo;
     asInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-    asInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+    asInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace |
+                   vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
     asInfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
     asInfo.dstAccelerationStructure = handle;
     asInfo.geometryCount = 1;
@@ -311,9 +316,80 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     m_addresses[handle] = tlasAddress;
     DEBUG_NAME( handle, name );
 
-    m_alloc->free( tlasScratch );
-
     return handle;
+}
+
+void ASBuilder::updateTlas( vk::AccelerationStructureKHR tlas,
+                            vk::AccelerationStructureKHR blas, glm::mat4 mat )
+{
+    VkTransformMatrixKHR transformMatrix = {
+        mat[0][0], mat[1][0], mat[2][0], mat[3][0], mat[0][1], mat[1][1],
+        mat[2][1], mat[3][1], mat[0][2], mat[1][2], mat[2][2], mat[3][2] };
+
+    //the BLAS instance that we're putting into the TLAS
+    vk::AccelerationStructureInstanceKHR instance;
+    instance.transform = transformMatrix;
+    instance.instanceCustomIndex = 0;
+    instance.mask = 0xFF;
+    instance.instanceShaderBindingTableRecordOffset = 0;
+    instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR |
+                     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+    instance.accelerationStructureReference = getAddress( blas );
+
+    m_alloc->updateVisibleBuffer(
+        m_instanceBuff, sizeof( vk::AccelerationStructureInstanceKHR ),
+        &instance );
+
+    vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
+    instanceDataDeviceAddress.deviceAddress =
+        m_alloc->getDeviceAddress( m_instanceBuff );
+
+    //geomery
+    vk::AccelerationStructureGeometryKHR geometry;
+    geometry.geometryType = vk::GeometryTypeKHR::eInstances;
+    geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
+    geometry.geometry.instances.sType =
+        vk::StructureType::eAccelerationStructureGeometryInstancesDataKHR;
+    geometry.geometry.instances.arrayOfPointers = false;
+    geometry.geometry.instances.data = instanceDataDeviceAddress;
+
+    auto tlasScratchAddress = m_alloc->getDeviceAddress( m_tlasScratch );
+
+    vk::AccelerationStructureBuildGeometryInfoKHR asInfo;
+    asInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+    asInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace |
+                   vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
+    asInfo.mode = vk::BuildAccelerationStructureModeKHR::eUpdate;
+    asInfo.dstAccelerationStructure = tlas;
+    asInfo.srcAccelerationStructure = tlas;
+    asInfo.geometryCount = 1;
+    asInfo.pGeometries = &geometry;
+    asInfo.scratchData.deviceAddress = tlasScratchAddress;
+
+    vk::AccelerationStructureBuildRangeInfoKHR asRangeInfo;
+    asRangeInfo.primitiveCount = 1;
+    asRangeInfo.primitiveOffset = 0;
+    asRangeInfo.firstVertex = 0;
+    asRangeInfo.transformOffset = 0;
+
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR*>
+        accelerationBuildStructureRangeInfos = {
+            reinterpret_cast<VkAccelerationStructureBuildRangeInfoKHR*>(
+                &asRangeInfo ) };
+
+    //Update the TLAS
+    auto buffer = m_pool.beginOneTimeSubmit( "TLAS Update" );
+
+    // clang-format off
+    AppState::instance().vkCmdBuildAccelerationStructuresKHR(
+        buffer,
+        1,
+        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>( &asInfo ),
+        accelerationBuildStructureRangeInfos.data()
+    );
+    // clang-format on
+
+    m_pool.endOneTimeSubmit( buffer );
 }
 
 uint64_t ASBuilder::getAddress( vk::AccelerationStructureKHR structure )
@@ -333,4 +409,5 @@ void ASBuilder::destroy()
 
     m_addresses.clear();
     m_structures.clear();
+    m_alloc->free( m_tlasScratch );
 }

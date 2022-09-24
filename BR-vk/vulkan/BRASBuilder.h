@@ -21,12 +21,17 @@ class ASBuilder
     vk::AccelerationStructureKHR buildTlas( std::string name,
                                             vk::AccelerationStructureKHR blas );
 
+    void updateTlas( vk::AccelerationStructureKHR tlas,
+                     vk::AccelerationStructureKHR blas, glm::mat4 mat );
+
     uint64_t getAddress( vk::AccelerationStructureKHR structure );
 
    private:
     vk::Device m_device;
     BufferAllocator* m_alloc;
     CommandPool m_pool;
+    vk::Buffer m_tlasScratch;
+    vk::Buffer m_instanceBuff;
 
     std::vector<vk::AccelerationStructureKHR> m_structures;
     std::map<vk::AccelerationStructureKHR, uint64_t> m_addresses;

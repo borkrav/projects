@@ -273,6 +273,16 @@ vk::Buffer BufferAllocator::createVisibleBuffer( std::string name,
     return buff;
 }
 
+void BufferAllocator::updateVisibleBuffer( vk::Buffer buff, vk::DeviceSize size,
+                                           void* data )
+{
+    auto mem = getMemory( buff );
+
+    void* dst = m_device.mapMemory( mem, 0, size );
+    memcpy( dst, data, size );
+    m_device.unmapMemory( mem );
+}
+
 vk::DeviceMemory BufferAllocator::getMemory(
     std::variant<vk::Buffer, vk::Image> buffer )
 {

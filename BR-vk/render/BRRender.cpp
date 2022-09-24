@@ -154,7 +154,7 @@ void BRRender::initVulkan()
 
     m_device = AppState::instance().getLogicalDevice();
 
-    loadModel( "room.obj" );
+    loadModel( "sphere.obj" );
 
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
@@ -372,7 +372,7 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
 {
     auto extent = AppState::instance().getSwapchainExtent();
 
-    bool rotate = false;
+    bool rotate = true;
 
     static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -402,6 +402,8 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
     void* data = m_device.mapMemory( mem, 0, sizeof( ubo ) );
     memcpy( data, &ubo, sizeof( ubo ) );
     m_device.unmapMemory( mem );
+
+    m_asBuilder.updateTlas( m_tlas, m_blas, ubo.model );
 }
 
 void BRRender::setRTRenderTarget( uint32_t imageIndex )
