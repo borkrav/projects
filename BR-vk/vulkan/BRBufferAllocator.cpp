@@ -266,7 +266,7 @@ vk::Buffer BufferAllocator::createVisibleBuffer( std::string name,
     DEBUG_NAME( buff, name );
 
     void* dst = m_device.mapMemory( mem, 0, size );
-    memcpy( data, dst, size );
+    memcpy( dst, data, size );
     m_device.unmapMemory( mem );
 
     return buff;

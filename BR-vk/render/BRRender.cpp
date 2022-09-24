@@ -235,8 +235,9 @@ void BRRender::createAS()
 
 void BRRender::createSBT()
 {
+    // size, in bytes, of the shader handle
     const uint32_t handleSize =
-        AppState::instance().rayTracingPipelineProperties.shaderGroupHandleSize;
+        AppState::instance().rayTracingPipelineProperties.shaderGroupHandleSize; 
     const uint32_t handleSizeAlignment =
         AppState::instance()
             .rayTracingPipelineProperties.shaderGroupHandleAlignment;
@@ -246,6 +247,7 @@ void BRRender::createSBT()
         3;  //TODO: This is how many shaders I'm using for the RT Pipeline
     const uint32_t sbtSize = groupCount * handleSizeAligned;
 
+    //3 32 byte handles
     std::vector<uint8_t> shaderHandleStorage( sbtSize );
 
     //These are the addresses for where the shaders are
@@ -257,7 +259,7 @@ void BRRender::createSBT()
         vk::BufferUsageFlagBits::eShaderBindingTableKHR |
         vk::BufferUsageFlagBits::eShaderDeviceAddress;
 
-    //create 3 buffers, each holdning the address of the shader
+    //create 3 buffers, each holding the address of the shader
     m_raygenSBT = m_bufferAlloc.createVisibleBuffer(
         "RayGen SBT", handleSize, bufferUsageFlags,
         shaderHandleStorage.data() );
@@ -608,7 +610,7 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
 
     VkStridedDeviceAddressRegionKHR hitShaderSbtEntry{};
     hitShaderSbtEntry.deviceAddress =
-        m_bufferAlloc.getDeviceAddress( m_raygenSBT );
+        m_bufferAlloc.getDeviceAddress( m_hitSBT );
     hitShaderSbtEntry.stride = handleSizeAligned;
     hitShaderSbtEntry.size = handleSizeAligned;
 

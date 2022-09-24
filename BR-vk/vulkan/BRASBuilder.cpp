@@ -184,11 +184,14 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
     instance.accelerationStructureReference = getAddress( blas );
 
-    std::vector<VkTransformMatrixKHR> test;
-    test.push_back( transformMatrix );
+    const vk::BufferUsageFlags bufferUsageFlags =
+        vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR |
+        vk::BufferUsageFlagBits::eShaderDeviceAddress;
 
-    VkBuffer instanceBuff =
-        m_alloc->createAndStageBuffer( "TLAS Instance", test );
+    //create 3 buffers, each holding the address of the shader
+    VkBuffer instanceBuff = m_alloc->createVisibleBuffer(
+        "TLAS Instance", sizeof( vk::AccelerationStructureInstanceKHR ),
+        bufferUsageFlags, &instance );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =
