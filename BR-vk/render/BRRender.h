@@ -2,9 +2,11 @@
 
 #define GLFW_INCLUDE_VULKAN
 
+#include <BRASBuilder.h>
 #include <BRAppState.h>
 #include <BRBufferAllocator.h>
 #include <BRCommandPool.h>
+#include <BRDescMgr.h>
 #include <BRDevice.h>
 #include <BRFramebuffer.h>
 #include <BRInstance.h>
@@ -13,8 +15,6 @@
 #include <BRSurface.h>
 #include <BRSwapchain.h>
 #include <BRSyncMgr.h>
-#include <BRDescMgr.h>
-#include <BRASBuilder.h>
 #include <GLFW/glfw3.h>
 
 #include <array>
@@ -88,16 +88,17 @@ class BRRender
         glm::mat4 proj;
     };
 
-
     void initWindow();
     void initVulkan();
+    void initRaster();
+    void initRT();
 
-    void loadModel();
+    void loadModel( std::string name );
 
     void recreateSwapchain();
 
     void recordRasterCommandBuffer( vk::CommandBuffer commandBuffer,
-                              uint32_t imageIndex );
+                                    uint32_t imageIndex );
 
     void recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
                                 uint32_t imageIndex );

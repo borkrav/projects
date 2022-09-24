@@ -117,7 +117,8 @@ vk::DescriptorPool DescMgr::createPool( std::string name, int numSets,
     }
 }
 
-vk::DescriptorSet DescMgr::createSet( std::string name, vk::DescriptorSetLayout layout,
+vk::DescriptorSet DescMgr::createSet( std::string name,
+                                      vk::DescriptorSetLayout layout,
                                       vk::DescriptorPool pool )
 {
     if ( !m_device )

@@ -18,7 +18,8 @@ class ASBuilder
                                             vk::Buffer indexBuffer,
                                             int maxVertex, int numIndex );
 
-    vk::AccelerationStructureKHR buildTlas( std::string name, vk::AccelerationStructureKHR blas );
+    vk::AccelerationStructureKHR buildTlas( std::string name,
+                                            vk::AccelerationStructureKHR blas );
 
     uint64_t getAddress( vk::AccelerationStructureKHR structure );
 

@@ -48,14 +48,11 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
 
     */
 
-    std::cout << "\nCurrent path is: " << std::filesystem::current_path()
+    std::cout << "\nCurrent load path is: " << std::filesystem::current_path()
               << std::endl;
 
     auto vertShaderCode = readFile( "build/shaders/shader.vert.spv" );
     auto fragShaderCode = readFile( "build/shaders/shader.frag.spv" );
-
-    printf( "\nLoaded shader: %s\n", "build/shaders/shader.vert.spv" );
-    printf( "Loaded shader: %s\n", "build/shaders/shader.frag.spv" );
 
     m_device = AppState::instance().getLogicalDevice();
     auto swapChainExtent = AppState::instance().getSwapchainExtent();

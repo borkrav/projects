@@ -20,9 +20,10 @@ class BufferAllocator
 
     //Creates a GPU buffer, copies data from CPU to staging buffer, copies from staging to final buffer
     template <typename T, typename A>
-    vk::Buffer createAndStageBuffer( std::string name,
-                                     std::vector<T, A> const& m_vertices,
-                                     vk::BufferUsageFlagBits type = static_cast<vk::BufferUsageFlagBits>(0) )
+    vk::Buffer createAndStageBuffer(
+        std::string name, std::vector<T, A> const& m_vertices,
+        vk::BufferUsageFlagBits type =
+            static_cast<vk::BufferUsageFlagBits>( 0 ) )
     {
         vk::DeviceSize size = sizeof( m_vertices[0] ) * m_vertices.size();
 
@@ -44,7 +45,7 @@ class BufferAllocator
         std::pair<vk::Buffer, vk::DeviceMemory> final;
 
         // if this has an actual type (vertex buffer, index buffer, etc)
-        if ( type != static_cast<vk::BufferUsageFlagBits>(0) )
+        if ( type != static_cast<vk::BufferUsageFlagBits>( 0 ) )
         {
             final = createBuffer(
                 size,
@@ -58,12 +59,13 @@ class BufferAllocator
         // if this doesn't have a type (generic storage buffer used for TLAS/BLAS matrices)
         else
         {
-            final = createBuffer( size,
-                          vk::BufferUsageFlagBits::eTransferDst |
-                              vk::BufferUsageFlagBits::eShaderDeviceAddress |
-                              vk::BufferUsageFlagBits::
-                                  eAccelerationStructureBuildInputReadOnlyKHR,
-                          vk::MemoryPropertyFlagBits::eDeviceLocal );
+            final = createBuffer(
+                size,
+                vk::BufferUsageFlagBits::eTransferDst |
+                    vk::BufferUsageFlagBits::eShaderDeviceAddress |
+                    vk::BufferUsageFlagBits::
+                        eAccelerationStructureBuildInputReadOnlyKHR,
+                vk::MemoryPropertyFlagBits::eDeviceLocal );
         }
 
         auto resultBuffer = final.first;
@@ -86,7 +88,7 @@ class BufferAllocator
     vk::Buffer createUniformBuffer( std::string name,
                                     vk::DeviceSize bufferSize );
 
-    //Creates a generic buffer
+    //Creates a generic buffer, host visible/coherent
     vk::Buffer createVisibleBuffer( std::string name, vk::DeviceSize bufferSize,
                                     vk::BufferUsageFlags usage, void* data );
 

@@ -58,17 +58,16 @@ void BRRender::initWindow()
         } );
 }
 
-void BRRender::loadModel()
+void BRRender::loadModel( std::string name )
 {
     tinyobj::ObjReader reader;  // Used to read an OBJ file
-    reader.ParseFromFile( "models/cube.obj" );
+    reader.ParseFromFile( "models/" + name );
 
     assert( reader.Valid() );  // Make sure tinyobj was able to parse this file
     const std::vector<tinyobj::real_t> objVertices =
         reader.GetAttrib().GetVertices();
     const std::vector<tinyobj::shape_t>& objShapes =
         reader.GetShapes();  // All shapes in the file
-    assert( objShapes.size() == 1 );
 
     std::map<std::string, int> indexMap;
     int index = 0;
@@ -109,7 +108,10 @@ void BRRender::loadModel()
         }
     }
 
-    printf( "Loaded file!\n" );
+    m_vertexBuffer = m_bufferAlloc.createAndStageBuffer(
+        "Vertex", m_vertices, vk::BufferUsageFlagBits::eVertexBuffer );
+    m_indexBuffer = m_bufferAlloc.createAndStageBuffer(
+        "Index", m_indices, vk::BufferUsageFlagBits::eIndexBuffer );
 }
 
 void BRRender::initUI()
@@ -152,13 +154,9 @@ void BRRender::initVulkan()
 
     m_device = AppState::instance().getLogicalDevice();
 
-    m_renderPass.create( "Raster Renderpass" );
+    loadModel( "room.obj" );
 
-    m_descriptorSetLayout = m_descMgr.createLayout(
-        "UBO layout", std::vector<BR::DescMgr::Binding>{
-                          { 0, vk::DescriptorType::eUniformBuffer, 1,
-                            vk::ShaderStageFlagBits::eVertex } } );
-
+    //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
         "Descriptor pool", 1000,
         std::vector<BR::DescMgr::PoolSize>{
@@ -168,8 +166,11 @@ void BRRender::initVulkan()
             { vk::DescriptorType::eAccelerationStructureKHR, 1 },
             { vk::DescriptorType::eStorageImage, 1 } } );
 
-    m_pipeline.create( "Raster Pipeline", m_renderPass, m_descriptorSetLayout );
-    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
+    m_descriptorSetLayout = m_descMgr.createLayout(
+        "UBO layout", std::vector<BR::DescMgr::Binding>{
+                          { 0, vk::DescriptorType::eUniformBuffer, 1,
+                            vk::ShaderStageFlagBits::eVertex } } );
+
     m_commandPool.create( "Drawing pool",
                           vk::CommandPoolCreateFlagBits::eResetCommandBuffer );
 
@@ -187,20 +188,24 @@ void BRRender::initVulkan()
             "Uniform buffer", sizeof( UniformBufferObject ) ) );
     }
 
-    loadModel();
-
-    m_vertexBuffer = m_bufferAlloc.createAndStageBuffer(
-        "Vertex", m_vertices, vk::BufferUsageFlagBits::eVertexBuffer );
-    m_indexBuffer = m_bufferAlloc.createAndStageBuffer(
-        "Index", m_indices, vk::BufferUsageFlagBits::eIndexBuffer );
-
-    m_asBuilder.create( m_bufferAlloc );
-
-    createDescriptorSets();
+    initRaster();
+    initRT();
 
     initUI();
+}
 
-    //RT
+void BRRender::initRaster()
+{
+    m_renderPass.create( "Raster Renderpass" );
+    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
+    m_pipeline.create( "Raster Pipeline", m_renderPass, m_descriptorSetLayout );
+    createDescriptorSets();
+}
+
+void BRRender::initRT()
+{
+    m_asBuilder.create( m_bufferAlloc );
+    m_renderPass.createRT( "RT Renderpass" );
     createAS();
 
     m_rtDescriptorSetLayout = m_descMgr.createLayout(
@@ -220,8 +225,6 @@ void BRRender::initVulkan()
 
 void BRRender::createAS()
 {
-    //BLAS
-
     auto it = std::max_element( m_indices.begin(), m_indices.end() );
     int maxVertex = ( *it ) + 1;
 
@@ -229,15 +232,13 @@ void BRRender::createAS()
                                     maxVertex, m_indices.size() );
 
     m_tlas = m_asBuilder.buildTlas( "TLAS", m_blas );
-
-    //going to use the back buffer (swap chain) as the RT target instead of an image, like the tutorial
 }
 
 void BRRender::createSBT()
 {
     // size, in bytes, of the shader handle
     const uint32_t handleSize =
-        AppState::instance().rayTracingPipelineProperties.shaderGroupHandleSize; 
+        AppState::instance().rayTracingPipelineProperties.shaderGroupHandleSize;
     const uint32_t handleSizeAlignment =
         AppState::instance()
             .rayTracingPipelineProperties.shaderGroupHandleAlignment;
@@ -280,22 +281,18 @@ void BRRender::createRTDescriptorSets()
 
     for ( int i : std::views::iota( 0, MAX_FRAMES_IN_FLIGHT ) )
     {
-        //Acceleration Structore
-        vk::WriteDescriptorSetAccelerationStructureKHR
-            descriptorAccelerationStructureInfo;
-        descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
-        descriptorAccelerationStructureInfo.pAccelerationStructures = &m_tlas;
+        //Acceleration Structure
+        vk::WriteDescriptorSetAccelerationStructureKHR asInfo;
+        asInfo.accelerationStructureCount = 1;
+        asInfo.pAccelerationStructures = &m_tlas;
 
-        vk::WriteDescriptorSet accelerationStructureWrite;
+        vk::WriteDescriptorSet asWrite;
         // The specialized acceleration structure descriptor has to be chained
-        accelerationStructureWrite.pNext = &descriptorAccelerationStructureInfo;
-        accelerationStructureWrite.dstSet = m_rtDescriptorSets[i];
-        accelerationStructureWrite.dstBinding = 0;
-        accelerationStructureWrite.descriptorCount = 1;
-        accelerationStructureWrite.descriptorType =
-            vk::DescriptorType::eAccelerationStructureKHR;
-
-        //Set Image later, during rendering, since I'm using the back-buffer
+        asWrite.pNext = &asInfo;
+        asWrite.dstSet = m_rtDescriptorSets[i];
+        asWrite.dstBinding = 0;
+        asWrite.descriptorCount = 1;
+        asWrite.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
 
         //The uniform Buffer, same as for raster
         vk::DescriptorBufferInfo bufferInfo;
@@ -315,7 +312,7 @@ void BRRender::createRTDescriptorSets()
         uniformBufferWrite.pTexelBufferView = nullptr;  // Optional
 
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
-            accelerationStructureWrite, uniformBufferWrite };
+            asWrite, uniformBufferWrite };
 
         vkUpdateDescriptorSets(
             m_device, 2, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
@@ -375,12 +372,16 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
 {
     auto extent = AppState::instance().getSwapchainExtent();
 
+    bool rotate = false;
+
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(
+    float time =
+        rotate ? std::chrono::duration<float, std::chrono::seconds::period>(
                      currentTime - startTime )
-                     .count();
+                     .count()
+               : 0;
 
     UniformBufferObject ubo{};
     ubo.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ),
@@ -407,7 +408,7 @@ void BRRender::setRTRenderTarget( uint32_t imageIndex )
 {
     auto views = AppState::instance().getImageViews();
 
-    //The uniform Buffer, same as for raster
+    //the render target
     vk::DescriptorImageInfo imageInfo;
     imageInfo.imageView = views[imageIndex];
     imageInfo.imageLayout = vk::ImageLayout::eGeneral;
@@ -526,35 +527,7 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
         throw std::runtime_error( "failed to begin recording command buffer!" );
     }
 
-    ///
-
-    auto framebuffer = m_framebuffer.get();
-
-    auto renderPassInfo = vk::RenderPassBeginInfo();
-    renderPassInfo.renderPass = m_renderPass.get();
-    renderPassInfo.framebuffer = framebuffer[imageIndex];
-    renderPassInfo.renderArea.offset.x = 0;
-    renderPassInfo.renderArea.offset.y = 0;
-    renderPassInfo.renderArea.extent = extent;
-
-    auto clearColor = vk::ClearValue();
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
-
-    commandBuffer.beginRenderPass( renderPassInfo,
-                                   vk::SubpassContents::eInline );
-
-    commandBuffer.nextSubpass( vk::SubpassContents::eInline );
-
-    ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), commandBuffer );
-
-    commandBuffer.endRenderPass();
-
-    ///
-
-    vk::Image srcImage =
-        AppState::instance().getSwapchainImage( imageIndex );
+    vk::Image srcImage = AppState::instance().getSwapchainImage( imageIndex );
 
     vk::ImageSubresourceRange range;
     range.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -564,24 +537,14 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
     range.layerCount = 1;
 
     // memory read -> transfer read
-    // presentation -> transfer source
-    imageBarrier( commandBuffer, srcImage, range, vk::AccessFlagBits::eMemoryRead,
-                  vk::AccessFlagBits::eShaderWrite,
-                  vk::ImageLayout::ePresentSrcKHR,
+    // undefined -> transfer source
+    imageBarrier( commandBuffer, srcImage, range,
+                  vk::AccessFlagBits::eMemoryRead,
+                  vk::AccessFlagBits::eShaderWrite, vk::ImageLayout::eUndefined,
                   vk::ImageLayout::eGeneral );
-
 
     commandBuffer.bindPipeline( vk::PipelineBindPoint::eRayTracingKHR,
                                 m_pipeline.getRT() );
-
-    // set the dynamic state for the pipeline
-    // this enables resizing of the window to work properly
-    // vk::Viewport viewport( 0.0f, 0.0f, extent.width, extent.height, 0.0f,
-    //                        1.0f );
-    // vk::Rect2D scissor( { 0, 0 }, extent );
-
-    // commandBuffer.setViewport( 0, viewport );
-    // commandBuffer.setScissor( 0, scissor );
 
     vkCmdBindDescriptorSets(
         commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
@@ -616,6 +579,7 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
 
     VkStridedDeviceAddressRegionKHR callableShaderSbtEntry{};
 
+    //Ray Trace
     AppState::instance().vkCmdTraceRaysKHR(
         commandBuffer, &raygenShaderSbtEntry, &missShaderSbtEntry,
         &hitShaderSbtEntry, &callableShaderSbtEntry, extent.width,
@@ -624,10 +588,29 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
     imageBarrier( commandBuffer, srcImage, range,
                   vk::AccessFlagBits::eShaderWrite,
                   vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral,
-                  vk::ImageLayout::ePresentSrcKHR );
+                  vk::ImageLayout::eGeneral );
 
+    auto framebuffer = m_framebuffer.get();
 
+    auto renderPassInfo = vk::RenderPassBeginInfo();
+    renderPassInfo.renderPass = m_renderPass.getRT();
+    renderPassInfo.framebuffer = framebuffer[imageIndex];
+    renderPassInfo.renderArea.offset.x = 0;
+    renderPassInfo.renderArea.offset.y = 0;
+    renderPassInfo.renderArea.extent = extent;
+    renderPassInfo.clearValueCount = 0;
 
+    //Render pass, this just transitions the image, doesn't clear it
+    commandBuffer.beginRenderPass( renderPassInfo,
+                                   vk::SubpassContents::eInline );
+
+    //Draw the UI over the RT output
+    commandBuffer.nextSubpass( vk::SubpassContents::eInline );
+
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), commandBuffer );
+
+    commandBuffer.endRenderPass();
 
     try
     {
@@ -696,7 +679,7 @@ void BRRender::drawFrame()
     result = m_device.resetFences( 1, &m_inFlightFences[m_currentFrame] );
 
     //if (!m_rtMode)
-        drawUI();
+    drawUI();
 
     updateUniformBuffer( m_currentFrame );
 

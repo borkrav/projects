@@ -1,6 +1,5 @@
 #include <BRInstance.h>
 #include <BRUtil.h>
-#include <BRUtil.h>
 
 using namespace BR;
 
@@ -187,7 +186,6 @@ void Instance::create( bool enableValidationLayers )
         throw std::runtime_error( "failed to create instance!" );
     }
 
-    printf( "\nCreated Vulkan instance\n" );
     printf( "\nLayers:\n" );
     for ( auto layer : validationLayers )
         printf( "\t%s\n", layer );

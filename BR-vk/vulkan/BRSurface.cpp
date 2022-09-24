@@ -20,8 +20,6 @@ void Surface::create( GLFWwindow* m_window )
     VkResult result = glfwCreateWindowSurface(
         AppState::instance().getInstance(), m_window, nullptr, &m_surface );
     CHECK_SUCCESS( result );
-
-    printf( "\nCreated Surface\n" );
 }
 
 void Surface::destroy()

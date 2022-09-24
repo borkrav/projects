@@ -13,8 +13,8 @@ class SyncMgr
     SyncMgr();
     ~SyncMgr();
 
-    vk::Semaphore createSemaphore(std::string name);
-    vk::Fence createFence(std::string name);
+    vk::Semaphore createSemaphore( std::string name );
+    vk::Fence createFence( std::string name );
     void destroy();
 
    private:

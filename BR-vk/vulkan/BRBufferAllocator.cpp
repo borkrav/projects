@@ -95,7 +95,8 @@ std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
     m_device.bindBufferMemory( buffer, mem, 0 );
 
     // if we want the address, save it
-    if ( (usage & vk::BufferUsageFlagBits::eShaderDeviceAddress) == vk::BufferUsageFlagBits::eShaderDeviceAddress )
+    if ( ( usage & vk::BufferUsageFlagBits::eShaderDeviceAddress ) ==
+         vk::BufferUsageFlagBits::eShaderDeviceAddress )
     {
         auto address = getBufferDeviceAddress( buffer );
         m_addresses[buffer] = address;

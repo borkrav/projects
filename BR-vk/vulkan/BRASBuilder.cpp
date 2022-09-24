@@ -27,18 +27,18 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
                                                    vk::Buffer indexBuffer,
                                                    int maxVertex, int numIndex )
 {
-    //TODO: clean this up, really confusing
+    const uint32_t numTriangles = numIndex / 3;
 
-    //for now, identity transform
+    //identity transform
     VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f,
                                              0.0f, 1.0f, 0.0f, 0.0f,
                                              0.0f, 0.0f, 1.0f, 0.0f };
 
-    std::vector<VkTransformMatrixKHR> test;
-    test.push_back( transformMatrix );
+    std::vector<VkTransformMatrixKHR> mats;
+    mats.push_back( transformMatrix );
 
     auto transformMatrixBuff =
-        m_alloc->createAndStageBuffer( "BLAS Transform", test );
+        m_alloc->createAndStageBuffer( "BLAS Transform", mats );
 
     vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
     vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
@@ -51,7 +51,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     transformBufferDeviceAddress.deviceAddress =
         m_alloc->getDeviceAddress( transformMatrixBuff );
 
-    //The connections to the geometry buffers
+    //Description of the geometry, where the index and vertex data is
     vk::AccelerationStructureGeometryKHR geometry;
     geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
     geometry.geometryType = vk::GeometryTypeKHR::eTriangles;
@@ -65,28 +65,26 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     geometry.geometry.triangles.transformData.hostAddress = nullptr;
     geometry.geometry.triangles.transformData = transformBufferDeviceAddress;
 
-    //What we're trying to build
-    vk::AccelerationStructureBuildGeometryInfoKHR sizeInfo;
-    sizeInfo.sType =
-        vk::StructureType::eAccelerationStructureBuildGeometryInfoKHR;
-    sizeInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-    sizeInfo.flags =
+    //Description of what we're building (BLAS)
+    vk::AccelerationStructureBuildGeometryInfoKHR geometryInfo;
+    geometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+    geometryInfo.flags =
         vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-    sizeInfo.geometryCount = 1;
-    sizeInfo.pGeometries = &geometry;
-
-    const uint32_t numTriangles = numIndex / 3;
+    geometryInfo.geometryCount = 1;
+    geometryInfo.pGeometries = &geometry;
 
     //get the size of everything
-    VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo{};
-    buildSizeInfo.sType =
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+    vk::AccelerationStructureBuildSizesInfoKHR buildSizeInfo;
 
+    // clang-format off
     AppState::instance().vkGetAccelerationStructureBuildSizesKHR(
-        m_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
-            &sizeInfo ),
-        &numTriangles, &buildSizeInfo );
+        m_device,
+        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(&geometryInfo ),
+        &numTriangles,
+        reinterpret_cast<VkAccelerationStructureBuildSizesInfoKHR*>(&buildSizeInfo )
+    );
+    // clang-format on
 
     //allocate the blas memory
     vk::Buffer blas = m_alloc->createAccelStructureBuffer(
@@ -98,12 +96,16 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     createInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
 
     //The resulting handle
-    VkAccelerationStructureKHR handle;
+    vk::AccelerationStructureKHR handle;
 
+    // clang-format off
     auto result = AppState::instance().vkCreateAccelerationStructureKHR(
         m_device,
         reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>( &createInfo ),
-        nullptr, &handle );
+        nullptr,
+        reinterpret_cast<VkAccelerationStructureKHR*>( &handle ) 
+    );
+    // clang-format on
 
     checkSuccess( result );
 
@@ -113,51 +115,53 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
 
     auto blasScratchAddress = m_alloc->getDeviceAddress( blasScratch );
 
-    // build the actual BLAS on the GPU
-    vk::AccelerationStructureBuildGeometryInfoKHR
-        accelerationBuildGeometryInfo{};
-    accelerationBuildGeometryInfo.type =
-        vk::AccelerationStructureTypeKHR::eBottomLevel;
-    accelerationBuildGeometryInfo.flags =
-        vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-    accelerationBuildGeometryInfo.mode =
-        vk::BuildAccelerationStructureModeKHR::eBuild;
-    accelerationBuildGeometryInfo.dstAccelerationStructure = handle;
-    accelerationBuildGeometryInfo.geometryCount = 1;
-    accelerationBuildGeometryInfo.pGeometries = &geometry;
-    accelerationBuildGeometryInfo.scratchData.deviceAddress =
-        blasScratchAddress;
+    //BLAS description
+    vk::AccelerationStructureBuildGeometryInfoKHR asInfo;
+    asInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+    asInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+    asInfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
+    asInfo.dstAccelerationStructure = handle;
+    asInfo.geometryCount = 1;
+    asInfo.pGeometries = &geometry;
+    asInfo.scratchData.deviceAddress = blasScratchAddress;
 
-    vk::AccelerationStructureBuildRangeInfoKHR
-        accelerationStructureBuildRangeInfo;
-    accelerationStructureBuildRangeInfo.primitiveCount = numTriangles;
-    accelerationStructureBuildRangeInfo.primitiveOffset = 0;
-    accelerationStructureBuildRangeInfo.firstVertex = 0;
-    accelerationStructureBuildRangeInfo.transformOffset = 0;
+    //BLAS range description
+    vk::AccelerationStructureBuildRangeInfoKHR asRangeInfo;
+    asRangeInfo.primitiveCount = numTriangles;
+    asRangeInfo.primitiveOffset = 0;
+    asRangeInfo.firstVertex = 0;
+    asRangeInfo.transformOffset = 0;
 
     std::vector<VkAccelerationStructureBuildRangeInfoKHR*>
         accelerationBuildStructureRangeInfos = {
             reinterpret_cast<VkAccelerationStructureBuildRangeInfoKHR*>(
-                &accelerationStructureBuildRangeInfo ) };
+                &asRangeInfo ) };
 
-    //Finally build the BLAS...
+    //Perform the BLAS build
     auto buffer = m_pool.beginOneTimeSubmit( name + " creation" );
+
+    // clang-format off
     AppState::instance().vkCmdBuildAccelerationStructuresKHR(
-        buffer, 1,
-        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
-            &accelerationBuildGeometryInfo ),
-        accelerationBuildStructureRangeInfos.data() );
+        buffer, 
+        1,
+        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(&asInfo ),
+        accelerationBuildStructureRangeInfos.data() 
+    );
+    // clang-format on
 
     m_pool.endOneTimeSubmit( buffer );
 
     //get the BLAS hardware address, needed to build TLAS later
-    VkAccelerationStructureDeviceAddressInfoKHR bufferDeviceAI{};
-    bufferDeviceAI.sType =
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-    bufferDeviceAI.accelerationStructure = handle;
+    vk::AccelerationStructureDeviceAddressInfoKHR adressInfo{};
+    adressInfo.accelerationStructure = handle;
+
+    // clang-format off
     auto blasAddress =
         AppState::instance().vkGetAccelerationStructureDeviceAddressKHR(
-            m_device, &bufferDeviceAI );
+            m_device,
+            reinterpret_cast<VkAccelerationStructureDeviceAddressInfoKHR*>(&adressInfo ) 
+    );
+    // clang-format on
 
     m_structures.push_back( handle );
     m_addresses[handle] = blasAddress;
@@ -168,7 +172,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     return handle;
 }
 
-// for now, one blas, one tlas
+//Build the TLAS, with one BLAS
 vk::AccelerationStructureKHR ASBuilder::buildTlas(
     std::string name, vk::AccelerationStructureKHR blas )
 {
@@ -176,6 +180,7 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
                                              0.0f, 1.0f, 0.0f, 0.0f,
                                              0.0f, 0.0f, 1.0f, 0.0f };
 
+    //the BLAS instance that we're putting into the TLAS
     vk::AccelerationStructureInstanceKHR instance;
     instance.transform = transformMatrix;
     instance.instanceCustomIndex = 0;
@@ -184,126 +189,123 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
     instance.accelerationStructureReference = getAddress( blas );
 
-    const vk::BufferUsageFlags bufferUsageFlags =
-        vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR |
-        vk::BufferUsageFlagBits::eShaderDeviceAddress;
+    std::vector<vk::AccelerationStructureInstanceKHR> instances;
+    instances.push_back( instance );
 
-    //create 3 buffers, each holding the address of the shader
-    VkBuffer instanceBuff = m_alloc->createVisibleBuffer(
-        "TLAS Instance", sizeof( vk::AccelerationStructureInstanceKHR ),
-        bufferUsageFlags, &instance );
+    VkBuffer instanceBuff =
+        m_alloc->createAndStageBuffer( "TLAS Instance", instances );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =
         m_alloc->getDeviceAddress( instanceBuff );
 
-    //geomery info
-    vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
-    accelerationStructureGeometry.geometryType =
-        vk::GeometryTypeKHR::eInstances;
-    accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
-    accelerationStructureGeometry.geometry.instances.sType =
+    //geomery
+    vk::AccelerationStructureGeometryKHR geometry;
+    geometry.geometryType = vk::GeometryTypeKHR::eInstances;
+    geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
+    geometry.geometry.instances.sType =
         vk::StructureType::eAccelerationStructureGeometryInstancesDataKHR;
-    accelerationStructureGeometry.geometry.instances.arrayOfPointers = false;
-    accelerationStructureGeometry.geometry.instances.data =
-        instanceDataDeviceAddress;
+    geometry.geometry.instances.arrayOfPointers = false;
+    geometry.geometry.instances.data = instanceDataDeviceAddress;
 
-    //size info
-    vk::AccelerationStructureBuildGeometryInfoKHR
-        accelerationStructureBuildGeometryInfo;
-    accelerationStructureBuildGeometryInfo.type =
-        vk::AccelerationStructureTypeKHR::eTopLevel;
-    accelerationStructureBuildGeometryInfo.flags =
+    //geometry info
+    vk::AccelerationStructureBuildGeometryInfoKHR geometryInfo;
+    geometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+    geometryInfo.flags =
         vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-    accelerationStructureBuildGeometryInfo.geometryCount = 1;
-    accelerationStructureBuildGeometryInfo.pGeometries =
-        &accelerationStructureGeometry;
+    geometryInfo.geometryCount = 1;
+    geometryInfo.pGeometries = &geometry;
 
     uint32_t primitive_count = 1;
 
-    VkAccelerationStructureBuildSizesInfoKHR
-        accelerationStructureBuildSizesInfo{};
-    accelerationStructureBuildSizesInfo.sType =
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+    vk::AccelerationStructureBuildSizesInfoKHR sizeInfo;
 
+    //Get the required size
+
+    // clang-format off
     AppState::instance().vkGetAccelerationStructureBuildSizesKHR(
-        m_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
-            &accelerationStructureBuildGeometryInfo ),
-        &primitive_count, &accelerationStructureBuildSizesInfo );
+        m_device, 
+        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>( &geometryInfo ),
+        &primitive_count,
+        reinterpret_cast<VkAccelerationStructureBuildSizesInfoKHR*>( &sizeInfo )
+    );
+    // clang-format on
 
     //allocate the tlas memory
     vk::Buffer tlas = m_alloc->createAccelStructureBuffer(
-        name + " Buffer",
-        accelerationStructureBuildSizesInfo.accelerationStructureSize );
+        name + " Buffer", sizeInfo.accelerationStructureSize );
 
-    vk::AccelerationStructureCreateInfoKHR accelerationStructureCreateInfo{};
-    accelerationStructureCreateInfo.buffer = tlas;
-    accelerationStructureCreateInfo.size =
-        accelerationStructureBuildSizesInfo.accelerationStructureSize;
-    accelerationStructureCreateInfo.type =
-        vk::AccelerationStructureTypeKHR::eTopLevel;
+    vk::AccelerationStructureCreateInfoKHR createInfo;
+    createInfo.buffer = tlas;
+    createInfo.size = sizeInfo.accelerationStructureSize;
+    createInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
 
     //the resulting handle (TLAS)
-    VkAccelerationStructureKHR handle;
+    vk::AccelerationStructureKHR handle;
 
+    // clang-format off
     auto result = AppState::instance().vkCreateAccelerationStructureKHR(
         m_device,
-        reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>(
-            &accelerationStructureCreateInfo ),
-        nullptr, &handle );
+        reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>( &createInfo ),
+        nullptr,
+        reinterpret_cast<VkAccelerationStructureKHR*>( &handle ) 
+    );
+    // clang-format on
 
     checkSuccess( result );
 
     //allocate scratch buffer
     vk::Buffer tlasScratch = m_alloc->createScratchBuffer(
-        name + " Scratch",
-        accelerationStructureBuildSizesInfo.buildScratchSize );
+        name + " Scratch", sizeInfo.buildScratchSize );
 
     auto tlasScratchAddress = m_alloc->getDeviceAddress( tlasScratch );
 
-    vk::AccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo;
-    accelerationBuildGeometryInfo.type =
-        vk::AccelerationStructureTypeKHR::eTopLevel;
-    accelerationBuildGeometryInfo.flags =
-        vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-    accelerationBuildGeometryInfo.mode =
-        vk::BuildAccelerationStructureModeKHR::eBuild;
-    accelerationBuildGeometryInfo.dstAccelerationStructure = handle;
-    accelerationBuildGeometryInfo.geometryCount = 1;
-    accelerationBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
-    accelerationBuildGeometryInfo.scratchData.deviceAddress =
-        tlasScratchAddress;
+    vk::AccelerationStructureBuildGeometryInfoKHR asInfo;
+    asInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
+    asInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+    asInfo.mode = vk::BuildAccelerationStructureModeKHR::eBuild;
+    asInfo.dstAccelerationStructure = handle;
+    asInfo.geometryCount = 1;
+    asInfo.pGeometries = &geometry;
+    asInfo.scratchData.deviceAddress = tlasScratchAddress;
 
-    vk::AccelerationStructureBuildRangeInfoKHR
-        accelerationStructureBuildRangeInfo;
-    accelerationStructureBuildRangeInfo.primitiveCount = 1;
-    accelerationStructureBuildRangeInfo.primitiveOffset = 0;
-    accelerationStructureBuildRangeInfo.firstVertex = 0;
-    accelerationStructureBuildRangeInfo.transformOffset = 0;
+    vk::AccelerationStructureBuildRangeInfoKHR asRangeInfo;
+    asRangeInfo.primitiveCount = 1;
+    asRangeInfo.primitiveOffset = 0;
+    asRangeInfo.firstVertex = 0;
+    asRangeInfo.transformOffset = 0;
 
     std::vector<VkAccelerationStructureBuildRangeInfoKHR*>
         accelerationBuildStructureRangeInfos = {
             reinterpret_cast<VkAccelerationStructureBuildRangeInfoKHR*>(
-                &accelerationStructureBuildRangeInfo ) };
+                &asRangeInfo ) };
 
-    //Finally build the TLAS...
+    //Build the TLAS
     auto buffer = m_pool.beginOneTimeSubmit( name + " creation" );
+
+    // clang-format off
     AppState::instance().vkCmdBuildAccelerationStructuresKHR(
-        buffer, 1,
-        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>(
-            &accelerationBuildGeometryInfo ),
-        accelerationBuildStructureRangeInfos.data() );
+        buffer,
+        1,
+        reinterpret_cast<VkAccelerationStructureBuildGeometryInfoKHR*>( &asInfo ),
+        accelerationBuildStructureRangeInfos.data()
+    );
+    // clang-format on
+
     m_pool.endOneTimeSubmit( buffer );
 
-    //get the TLAS hardware address, needed to build TLAS later
-    VkAccelerationStructureDeviceAddressInfoKHR bufferDeviceAI{};
-    bufferDeviceAI.sType =
-        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-    bufferDeviceAI.accelerationStructure = handle;
+    //get the TLAS hardware address
+    vk::AccelerationStructureDeviceAddressInfoKHR adressInfo{};
+    adressInfo.accelerationStructure = handle;
+
+    // clang-format off
     auto tlasAddress =
         AppState::instance().vkGetAccelerationStructureDeviceAddressKHR(
-            m_device, &bufferDeviceAI );
+            m_device,
+            reinterpret_cast<VkAccelerationStructureDeviceAddressInfoKHR*>(&adressInfo ) 
+    );
+    // clang-format on
 
     m_structures.push_back( handle );
     m_addresses[handle] = tlasAddress;

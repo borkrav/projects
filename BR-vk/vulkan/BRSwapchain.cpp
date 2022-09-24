@@ -17,7 +17,6 @@ Swapchain::~Swapchain()
 
 void Swapchain::create( std::string name, GLFWwindow* window )
 {
-
     auto surfaceFormat = vk::SurfaceFormatKHR(
         vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear );
 
@@ -63,7 +62,8 @@ void Swapchain::create( std::string name, GLFWwindow* window )
     createInfo.imageExtent = m_swapChainExtent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
-                            vk::ImageUsageFlagBits::eTransferSrc |vk::ImageUsageFlagBits::eStorage;
+                            vk::ImageUsageFlagBits::eTransferSrc |
+                            vk::ImageUsageFlagBits::eStorage;
     createInfo.imageSharingMode = vk::SharingMode::eExclusive;
     createInfo.preTransform = capabilities.currentTransform;
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
@@ -134,9 +134,6 @@ void Swapchain::createImageViews( std::string name )
             throw std::runtime_error( "failed to create image views!" );
         }
     }
-    printf( "\nCreated %d Image Views: %s\n",
-            static_cast<int>( m_swapChainImages.size() ),
-            "VK_IMAGE_VIEW_TYPE_2D" );
 }
 
 void Swapchain::destroy()

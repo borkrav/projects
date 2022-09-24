@@ -50,7 +50,6 @@ class AppState
     vk::Extent2D& getSwapchainExtent();
     std::vector<vk::ImageView>& getImageViews();
 
-
     //RT Device Functions
     PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
     PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR;

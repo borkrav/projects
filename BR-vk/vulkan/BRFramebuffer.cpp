@@ -15,7 +15,7 @@ Framebuffer::~Framebuffer()
     assert( m_swapChainFramebuffers.empty() );
 }
 
-void Framebuffer::create(std::string name, RenderPass& renderpass )
+void Framebuffer::create( std::string name, RenderPass& renderpass )
 {
     /*
     * The framebuffer binds the VkImageViews from the swap chain
@@ -54,9 +54,6 @@ void Framebuffer::create(std::string name, RenderPass& renderpass )
             throw std::runtime_error( "failed to create framebuffer!" );
         }
     }
-
-    printf( "\nCreated %d Frame Buffers\n",
-            static_cast<int>( imageViews.size() ) );
 }
 
 void Framebuffer::destroy()

@@ -1,31 +1,29 @@
-Vulkan Renderer
-- Work with OBJ files and scenes
-- Draw triangle scene
-- Learn lighting/materials/math/shaders
-- Ray Tracing mode, using RTX hardware, Vulkan extensions
-- Ray Tracing will implement bounce lighting, shadows, etc
+# Vulkan Renderer
+
+# Goals
+- OBJ viewer, supporting Raster and RT
+- Learn the computer graphics pipeline and GPU
+- Learn rendering methods and graphics math
+- Write all the Vulkan code myself, to maximize learning the API. Use minimal libraries. 
 
 
-- Goal is to be very familiar in how Vulkan works, how it maps to GPU
-- Learn some math
-- Learn some rendering methods - lighting, shading, etc
+# Work log
+1.  [04-2022] Went through https://vulkan-tutorial.com/
+2.  [07-2022] Split tutorial code into classes
+3.  [08-2022] Added debugging - naming vulkan objects
+4.  [08-2022] Wrote a simple GPU memory manager, read .OBJ, draw vertices
+5.  [08-2022] Implemented simple transformations  ( rotate object ). This involved learning about descriptors
+6.  [08-2022] Implemented simple shading
+7.  [08-2022] Added vulkan images/storage
+8.  [08-2022] Added screenshot button, this writes out back buffer to disk
+9.  [08-2022] Added Dear ImGui, from the Nvidia RT tutorial
+10. [09-2022] Added ray tracing pipeline (BLAS, TLAS, SBT)
 
+# Current work
+1. Add kb+m camera transformations - orbit, zoom, pan, etc. Should teach me transforms
+2. Go into Raster and RT shaders. Implement some more interesting shading
+3. Add accumulation buffer from the 2019 work
+4. Some refactoring and class re-design might be needed
 
-1. Split current tutorial code into distinct classes for readability/understandability. Going to get it to work on my own hardware, not going to care about the general case - DONE
-2. Write a debug annotation utility - DONE
-    - write a simple GPU memory manager - read OBJ, draw the vertices  - DONE
-    - refactor the memory manager - DONE
-    - figure out transformations of your object - DONE
-    - implement simple flat shading
-
-    - write an image creator
-    - write a pipeline generator
-
-3. Add Dear ImGui, follow tutorial, understand how this works
-4. Read .OBJ file, create buffers, similar to Nvidia Tutorial, draw the cube, try other scenes
-5. Start learning about lighting/shading
-6. Add in screenshot from other tutorial
-7. Add in ray tracing
-8. Add accumulation buffer, from other tutorial
 
 

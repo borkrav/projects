@@ -129,8 +129,7 @@ void Device::create( std::string name,
 
     auto properties = m_physicalDevice.getProperties();
 
-    printf( "\nSelected Physical Device\n" );
-    printf( "\nName:\n" );
+    printf( "\nGPU:\n" );
     printf( "\t%s\n", properties.deviceName );
     printf( "\nQueue Families:\n" );
 
@@ -160,6 +159,4 @@ void Device::create( std::string name,
     printf( "\nDevice Extensions:\n" );
     for ( auto extension : deviceExtensions )
         printf( "\t%s\n", extension );
-    printf( "\nGot Device queue from family with index: %d\n",
-            graphicsFamilyIndex );
 }
