@@ -5,11 +5,13 @@
 #include <BRASBuilder.h>
 #include <BRAppState.h>
 #include <BRBufferAllocator.h>
+#include <BRCameraManip.h>
 #include <BRCommandPool.h>
 #include <BRDescMgr.h>
 #include <BRDevice.h>
 #include <BRFramebuffer.h>
 #include <BRInstance.h>
+#include <BRModelManip.h>
 #include <BRPipeline.h>
 #include <BRRenderPass.h>
 #include <BRSurface.h>
@@ -49,6 +51,9 @@ class BRRender
     DescMgr m_descMgr;
     ASBuilder m_asBuilder;
 
+    ModelManip m_modelManip;
+    CameraManip m_cameraManip;
+
     vk::Device m_device;
 
     std::vector<vk::CommandBuffer> m_commandBuffers;
@@ -80,6 +85,9 @@ class BRRender
     vk::Buffer m_hitSBT;
 
     bool m_rtMode = false;
+    int m_transformMode = 0;
+    bool m_modelInput = false;
+    bool m_camInput = false;
 
     struct UniformBufferObject
     {
@@ -122,6 +130,9 @@ class BRRender
     void createAS();
     void createSBT();
     void createRTDescriptorSets();
+
+    void onMouseButton( int button, int action, int mods );
+    void onMouseMove( int x, int y );
 };
 
 }  // namespace BR

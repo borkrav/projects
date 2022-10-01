@@ -56,6 +56,81 @@ void BRRender::initWindow()
                 glfwGetWindowUserPointer( window ) );
             app->m_framebufferResized = true;
         } );
+
+    glfwSetMouseButtonCallback(
+        m_window,
+        []( GLFWwindow* window, int button, int action, int mods )
+        {
+            auto app = reinterpret_cast<BRRender*>(
+                glfwGetWindowUserPointer( window ) );
+            app->onMouseButton( button, action, mods );
+        } );
+
+    glfwSetCursorPosCallback( m_window,
+                              []( GLFWwindow* window, double x, double y )
+                              {
+                                  auto app = reinterpret_cast<BRRender*>(
+                                      glfwGetWindowUserPointer( window ) );
+                                  app->onMouseMove( static_cast<int>( x ),
+                                                    static_cast<int>( y ) );
+                              } );
+}
+
+void BRRender::onMouseButton( int button, int action, int mods )
+{
+    if ( action == GLFW_PRESS && !mods )
+    {
+        if ( button == GLFW_MOUSE_BUTTON_LEFT )
+            m_modelManip.setMouseButton( ModelManip::MouseButton::lmb );
+        else if ( button == GLFW_MOUSE_BUTTON_MIDDLE )
+            m_modelManip.setMouseButton( ModelManip::MouseButton::mmb );
+        else if ( button == GLFW_MOUSE_BUTTON_RIGHT )
+            m_modelManip.setMouseButton( ModelManip::MouseButton::rmb );
+
+        m_modelInput = true;
+
+        double x, y;
+        glfwGetCursorPos( m_window, &x, &y );
+        m_modelManip.setMousePos( static_cast<int>( x ),
+                                  static_cast<int>( y ) );
+    }
+
+    if ( action == GLFW_PRESS && mods & GLFW_MOD_ALT && mods & GLFW_MOD_SHIFT )
+    {
+        if ( button == GLFW_MOUSE_BUTTON_LEFT )
+            m_cameraManip.setMouseButton( ModelManip::MouseButton::lmb );
+        else if ( button == GLFW_MOUSE_BUTTON_MIDDLE )
+            m_cameraManip.setMouseButton( ModelManip::MouseButton::mmb );
+        else if ( button == GLFW_MOUSE_BUTTON_RIGHT )
+            m_cameraManip.setMouseButton( ModelManip::MouseButton::rmb );
+
+        m_camInput = true;
+
+        double x, y;
+        glfwGetCursorPos( m_window, &x, &y );
+        m_cameraManip.setMousePos( static_cast<int>( x ),
+                                   static_cast<int>( y ) );
+    }
+
+    else if ( action == GLFW_RELEASE )
+    {
+        m_camInput = false;
+        m_modelInput = false;
+    }
+}
+
+void BRRender::onMouseMove( int x, int y )
+{
+    if ( ImGui::GetCurrentContext() != nullptr &&
+         ImGui::GetIO().WantCaptureMouse )
+    {
+        return;
+    }
+    if ( m_modelInput )
+        m_modelManip.doManip(
+            x, y, static_cast<ModelManip::ManipMode>( m_transformMode ) );
+    else if ( m_camInput )
+        m_cameraManip.doManip( x, y );
 }
 
 void BRRender::loadModel( std::string name )
@@ -154,7 +229,7 @@ void BRRender::initVulkan()
 
     m_device = AppState::instance().getLogicalDevice();
 
-    loadModel( "sphere.obj" );
+    loadModel( "cube.obj" );
 
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
@@ -372,24 +447,11 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
 {
     auto extent = AppState::instance().getSwapchainExtent();
 
-    bool rotate = true;
-
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time =
-        rotate ? std::chrono::duration<float, std::chrono::seconds::period>(
-                     currentTime - startTime )
-                     .count()
-               : 0;
-
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ),
-                             glm::vec3( 0.0f, 0.0f, 1.0f ) );
 
-    ubo.view = glm::lookAt( glm::vec3( 2.0f, 2.0f, 2.0f ),
-                            glm::vec3( 0.0f, 0.0f, 0.0f ),
-                            glm::vec3( 0.0f, 0.0f, 1.0f ) );
+    ubo.model = m_modelManip.getMat();
+
+    ubo.view = m_cameraManip.getMat();
 
     ubo.proj =
         glm::perspective( glm::radians( 45.0f ),
@@ -632,6 +694,16 @@ void BRRender::drawUI()
     ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)",
                  1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
     ImGui::Checkbox( "Ray Tracing", &m_rtMode );
+
+    const char* items[] = { "Rotate", "Translate", "Scale" };
+    ImGui::Combo( "Model Manip", &m_transformMode, items,
+                  IM_ARRAYSIZE( items ) );
+
+    if ( ImGui::Button( "Reset Transforms" ) )
+    {
+        m_modelManip.reset();
+        m_cameraManip.reset();
+    }
 
     if ( ImGui::Button( "Screenshot" ) )
     {
