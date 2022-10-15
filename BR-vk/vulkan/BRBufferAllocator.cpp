@@ -212,6 +212,39 @@ vk::Image BufferAllocator::createImage( std::string name, uint32_t width,
     return image;
 }
 
+vk::ImageView BufferAllocator::createImageView(
+    std::string name, vk::Image image, vk::Format format,
+    vk::ImageAspectFlagBits aspectFlagBits )
+{
+    vk::ImageViewCreateInfo createInfo;
+    createInfo.image = image;
+    createInfo.viewType = vk::ImageViewType::e2D;
+    createInfo.format = format;
+    createInfo.components.r = vk::ComponentSwizzle::eIdentity;
+    createInfo.components.g = vk::ComponentSwizzle::eIdentity;
+    createInfo.components.b = vk::ComponentSwizzle::eIdentity;
+    createInfo.components.a = vk::ComponentSwizzle::eIdentity;
+    createInfo.subresourceRange.aspectMask = aspectFlagBits;
+    createInfo.subresourceRange.baseMipLevel = 0;
+    createInfo.subresourceRange.levelCount = 1;
+    createInfo.subresourceRange.baseArrayLayer = 0;
+    createInfo.subresourceRange.layerCount = 1;
+
+    try
+    {
+        vk::ImageView view = m_device.createImageView( createInfo );
+
+        DEBUG_NAME( view, name )
+
+        m_imageViews[image].push_back( view );
+        return view;
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to create " + name );
+    }
+}
+
 vk::Buffer BufferAllocator::createAccelStructureBuffer( std::string name,
                                                         vk::DeviceSize size )
 {
@@ -321,7 +354,16 @@ void BufferAllocator::free( std::variant<vk::Buffer, vk::Image> buffer )
         m_device.destroyBuffer( std::get<vk::Buffer>( obj ) );
 
     else if ( std::holds_alternative<vk::Image>( obj ) )
-        m_device.destroyImage( std::get<vk::Image>( obj ) );
+    {
+        auto image = std::get<vk::Image>( obj );
+
+        for ( auto view : m_imageViews[image] )
+            m_device.destroyImageView( view );
+
+        m_device.destroyImage( image );
+
+        m_imageViews.erase( image );
+    }
 
     m_device.freeMemory( mem );
 
@@ -347,7 +389,14 @@ void BufferAllocator::destroy()
             m_device.destroyBuffer( std::get<vk::Buffer>( obj ) );
 
         else if ( std::holds_alternative<vk::Image>( obj ) )
-            m_device.destroyImage( std::get<vk::Image>( obj ) );
+        {
+            auto image = std::get<vk::Image>( obj );
+
+            for ( auto view : m_imageViews[image] )
+                m_device.destroyImageView( view );
+
+            m_device.destroyImage( image );
+        }
 
         m_device.freeMemory( mem );
     }
@@ -355,4 +404,5 @@ void BufferAllocator::destroy()
     m_copyPool.destroy();
 
     m_alloc.clear();
+    m_imageViews.clear();
 }

@@ -109,11 +109,8 @@ void Swapchain::createImageViews( std::string name )
         createInfo.format = m_swapChainFormat;
         createInfo.components.r = vk::ComponentSwizzle::eIdentity;
         createInfo.components.g = vk::ComponentSwizzle::eIdentity;
-        ;
         createInfo.components.b = vk::ComponentSwizzle::eIdentity;
-        ;
         createInfo.components.a = vk::ComponentSwizzle::eIdentity;
-        ;
         createInfo.subresourceRange.aspectMask =
             vk::ImageAspectFlagBits::eColor;
         createInfo.subresourceRange.baseMipLevel = 0;

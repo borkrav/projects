@@ -64,6 +64,9 @@ class BRRender
     vk::Buffer m_vertexBuffer;
     vk::Buffer m_indexBuffer;
 
+    vk::Image m_depthBuffer;
+    vk::ImageView m_depthBufferView;
+
     vk::DescriptorSetLayout m_descriptorSetLayout;
     vk::DescriptorPool m_descriptorPool;
     std::vector<vk::DescriptorSet> m_descriptorSets;
@@ -94,6 +97,7 @@ class BRRender
         glm::mat4 model;
         glm::mat4 view;
         glm::mat4 proj;
+        glm::vec3 cameraPos;
     };
 
     void initWindow();
@@ -126,6 +130,7 @@ class BRRender
 
     void createDescriptorSets();
     void updateUniformBuffer( uint32_t currentImage );
+    void createDepthBuffer();
 
     void createAS();
     void createSBT();

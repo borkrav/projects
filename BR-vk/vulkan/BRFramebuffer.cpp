@@ -15,7 +15,8 @@ Framebuffer::~Framebuffer()
     assert( m_swapChainFramebuffers.empty() );
 }
 
-void Framebuffer::create( std::string name, RenderPass& renderpass )
+void Framebuffer::create( std::string name, RenderPass& renderpass,
+                          vk::ImageView depthImageView )
 {
     /*
     * The framebuffer binds the VkImageViews from the swap chain
@@ -30,11 +31,11 @@ void Framebuffer::create( std::string name, RenderPass& renderpass )
 
     for ( size_t i = 0; i < imageViews.size(); i++ )
     {
-        vk::ImageView attachments[] = { imageViews[i] };
+        vk::ImageView attachments[] = { imageViews[i], depthImageView };
 
         vk::FramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.renderPass = renderpass.get();
-        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.attachmentCount = 2;
         framebufferInfo.pAttachments = attachments;
         framebufferInfo.width = extent.width;
         framebufferInfo.height = extent.height;

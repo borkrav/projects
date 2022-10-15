@@ -28,6 +28,11 @@ void CameraManip::doManip( int x, int y )
         zoom( x, y );
 }
 
+glm::vec3& CameraManip::getEye()
+{
+    return m_eye;
+}
+
 void CameraManip::orbit( int x, int y )
 {
     float distanceX = x - m_mousePos.x;

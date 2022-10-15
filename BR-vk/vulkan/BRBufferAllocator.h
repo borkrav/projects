@@ -102,6 +102,10 @@ class BufferAllocator
                            vk::ImageUsageFlags usage,
                            vk::MemoryPropertyFlags memFlags );
 
+    vk::ImageView createImageView( std::string name, vk::Image image,
+                                   vk::Format format,
+                                   vk::ImageAspectFlagBits aspectFlagBits );
+
     vk::Buffer createAccelStructureBuffer( std::string name,
                                            vk::DeviceSize size );
 
@@ -127,6 +131,7 @@ class BufferAllocator
 
     std::map<std::variant<vk::Buffer, vk::Image>, vk::DeviceMemory> m_alloc;
     std::map<vk::Buffer, uint64_t> m_addresses;
+    std::map<vk::Image, std::vector<vk::ImageView> > m_imageViews;
 
     vk::Device m_device;
     CommandPool m_copyPool;

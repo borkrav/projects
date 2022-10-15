@@ -12,6 +12,7 @@
 #define GLM_FORCE_RADIANS
 #include <chrono>
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -229,7 +230,7 @@ void BRRender::initVulkan()
 
     m_device = AppState::instance().getLogicalDevice();
 
-    loadModel( "cube.obj" );
+    loadModel( "room.obj" );
 
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
@@ -269,10 +270,27 @@ void BRRender::initVulkan()
     initUI();
 }
 
+void BRRender::createDepthBuffer()
+{
+    auto extent = AppState::instance().getSwapchainExtent();
+
+    m_depthBuffer = m_bufferAlloc.createImage(
+        "Depth Buffer", extent.width, extent.height, vk::Format::eD32Sfloat,
+        vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment,
+        vk::MemoryPropertyFlagBits::eDeviceLocal );
+
+    m_depthBufferView = m_bufferAlloc.createImageView(
+        "Depth Buffer Image View", m_depthBuffer, vk::Format::eD32Sfloat,
+        vk::ImageAspectFlagBits::eDepth );
+}
+
 void BRRender::initRaster()
 {
+    createDepthBuffer();
     m_renderPass.create( "Raster Renderpass" );
-    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
+    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass,
+                          m_depthBufferView );
     m_pipeline.create( "Raster Pipeline", m_renderPass, m_descriptorSetLayout );
     createDescriptorSets();
 }
@@ -438,9 +456,13 @@ void BRRender::recreateSwapchain()
 
     m_device.waitIdle();
 
+    m_bufferAlloc.free( m_depthBuffer );
+
     m_framebuffer.destroy();
     AppState::instance().recreateSwapchain();
-    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass );
+    createDepthBuffer();
+    m_framebuffer.create( "Swapchain Frame buffer", m_renderPass,
+                          m_depthBufferView );
 }
 
 void BRRender::updateUniformBuffer( uint32_t currentImage )
@@ -458,6 +480,8 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
                           extent.width / (float)extent.height, 0.1f, 10.0f );
 
     ubo.proj[1][1] *= -1;
+
+    ubo.cameraPos = m_cameraManip.getEye();
 
     auto mem = m_bufferAlloc.getMemory( m_uniformBuffers[currentImage] );
 
@@ -525,9 +549,13 @@ void BRRender::recordRasterCommandBuffer( vk::CommandBuffer commandBuffer,
     renderPassInfo.renderArea.offset.y = 0;
     renderPassInfo.renderArea.extent = extent;
 
-    auto clearColor = vk::ClearValue();
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
+    std::array<vk::ClearValue, 2> clearValues{};
+    clearValues[0] = vk::ClearColorValue(
+        std::array<float, 4>( { { 0.2f, 0.2f, 0.2f, 0.2f } } ) );
+    clearValues[1] = vk::ClearDepthStencilValue( 1.0f, 0 );
+
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = clearValues.data();
 
     commandBuffer.beginRenderPass( renderPassInfo,
                                    vk::SubpassContents::eInline );
@@ -662,7 +690,14 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
     renderPassInfo.renderArea.offset.x = 0;
     renderPassInfo.renderArea.offset.y = 0;
     renderPassInfo.renderArea.extent = extent;
-    renderPassInfo.clearValueCount = 0;
+
+    std::array<vk::ClearValue, 2> clearValues{};
+    clearValues[0] = vk::ClearColorValue(
+        std::array<float, 4>( { { 0.2f, 0.2f, 0.2f, 0.2f } } ) );
+    clearValues[1] = vk::ClearDepthStencilValue( 1.0f, 0 );
+
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = clearValues.data();
 
     //Render pass, this just transitions the image, doesn't clear it
     commandBuffer.beginRenderPass( renderPassInfo,

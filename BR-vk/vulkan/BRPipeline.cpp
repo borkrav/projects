@@ -113,6 +113,15 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
     rasterizer.frontFace = vk::FrontFace::eCounterClockwise;
     rasterizer.depthBiasEnable = VK_FALSE;
 
+    vk::PipelineDepthStencilStateCreateInfo depthStencil;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthCompareOp = vk::CompareOp::eLess;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.0f;  // Optional
+    depthStencil.maxDepthBounds = 1.0f;  // Optional
+    depthStencil.stencilTestEnable = VK_FALSE;
+
     vk::PipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
@@ -170,6 +179,7 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = nullptr;
     pipelineInfo.pDynamicState = &dynamicInfo;
+    pipelineInfo.pDepthStencilState = &depthStencil;
 
     try
     {

@@ -15,6 +15,7 @@ class CameraManip : public Manip
 
     void doManip( int x, int y );
     void reset() override;
+    glm::vec3& getEye();
 
    private:
     glm::vec3 m_eye;
