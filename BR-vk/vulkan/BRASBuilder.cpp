@@ -58,8 +58,8 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     geometry.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
     geometry.geometry.triangles.vertexData = vertexBufferDeviceAddress;
     geometry.geometry.triangles.maxVertex = maxVertex;
-    geometry.geometry.triangles.vertexStride = sizeof( Pipeline::Vertex );
-    geometry.geometry.triangles.indexType = vk::IndexType::eUint16;
+    geometry.geometry.triangles.vertexStride = sizeof( glm::vec4 );
+    geometry.geometry.triangles.indexType = vk::IndexType::eUint32;
     geometry.geometry.triangles.indexData = indexBufferDeviceAddress;
     geometry.geometry.triangles.transformData.deviceAddress = 0;
     geometry.geometry.triangles.transformData.hostAddress = nullptr;

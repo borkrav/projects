@@ -16,7 +16,7 @@ class DescMgr
         int bind;
         vk::DescriptorType type;
         int count;
-        vk::ShaderStageFlagBits stage;
+        vk::ShaderStageFlags stage;
     };
 
     struct PoolSize

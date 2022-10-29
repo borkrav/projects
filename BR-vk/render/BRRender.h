@@ -62,6 +62,7 @@ class BRRender
     std::vector<vk::Fence> m_inFlightFences;
 
     vk::Buffer m_vertexBuffer;
+    vk::Buffer m_rtVertexBuffer;
     vk::Buffer m_indexBuffer;
 
     vk::Image m_depthBuffer;
@@ -75,7 +76,7 @@ class BRRender
     int m_currentFrame = 0;
 
     std::vector<Pipeline::Vertex> m_vertices;
-    std::vector<uint16_t> m_indices;
+    std::vector<uint32_t> m_indices;
 
     //Ray-Tracing related things
     vk::AccelerationStructureKHR m_blas;

@@ -148,6 +148,8 @@ void BRRender::loadModel( std::string name )
     std::map<std::string, int> indexMap;
     int index = 0;
 
+    std::vector<glm::vec4> rawVerts;
+
     //every combination of vertex/normal pairs must be uniquely defined
     //data duplication cannot be avoided
     for ( auto shape : objShapes )
@@ -163,6 +165,10 @@ void BRRender::loadModel( std::string name )
                 { objVertices[normIndex * 3], objVertices[normIndex * 3 + 1],
                   objVertices[normIndex * 3 + 2] } };
 
+            glm::vec4 rawVert = { objVertices[vertIndex * 3],
+                                  objVertices[vertIndex * 3 + 1],
+                                  objVertices[vertIndex * 3 + 2], 1 };
+
             //this might be slow
             std::string vertString =
                 std::to_string( vert.pos.x ) + std::to_string( vert.pos.y ) +
@@ -174,6 +180,7 @@ void BRRender::loadModel( std::string name )
             if ( it == indexMap.end() )
             {
                 m_vertices.push_back( vert );
+                rawVerts.push_back( rawVert );
                 m_indices.push_back( index );
                 indexMap[vertString] = index++;
             }
@@ -186,8 +193,12 @@ void BRRender::loadModel( std::string name )
 
     m_vertexBuffer = m_bufferAlloc.createAndStageBuffer(
         "Vertex", m_vertices, vk::BufferUsageFlagBits::eVertexBuffer );
+    m_rtVertexBuffer = m_bufferAlloc.createAndStageBuffer(
+        "RTVertex", rawVerts, vk::BufferUsageFlagBits::eStorageBuffer );
     m_indexBuffer = m_bufferAlloc.createAndStageBuffer(
-        "Index", m_indices, vk::BufferUsageFlagBits::eIndexBuffer );
+        "Index", m_indices,
+        vk::BufferUsageFlagBits::eIndexBuffer |
+            vk::BufferUsageFlagBits::eStorageBuffer );
 }
 
 void BRRender::initUI()
@@ -309,7 +320,11 @@ void BRRender::initRT()
             { 1, vk::DescriptorType::eStorageImage, 1,
               vk::ShaderStageFlagBits::eRaygenKHR },
             { 2, vk::DescriptorType::eUniformBuffer, 1,
-              vk::ShaderStageFlagBits::eRaygenKHR } } );
+              vk::ShaderStageFlagBits::eRaygenKHR },
+            { 3, vk::DescriptorType::eStorageBuffer, 1,
+              vk::ShaderStageFlagBits::eClosestHitKHR },
+            { 4, vk::DescriptorType::eStorageBuffer, 1,
+              vk::ShaderStageFlagBits::eClosestHitKHR } } );
 
     m_pipeline.createRT( "RT Pipeline", m_rtDescriptorSetLayout );
     createSBT();
@@ -321,7 +336,7 @@ void BRRender::createAS()
     auto it = std::max_element( m_indices.begin(), m_indices.end() );
     int maxVertex = ( *it ) + 1;
 
-    m_blas = m_asBuilder.buildBlas( "BLAS", m_vertexBuffer, m_indexBuffer,
+    m_blas = m_asBuilder.buildBlas( "BLAS", m_rtVertexBuffer, m_indexBuffer,
                                     maxVertex, m_indices.size() );
 
     m_tlas = m_asBuilder.buildTlas( "TLAS", m_blas );
@@ -404,11 +419,41 @@ void BRRender::createRTDescriptorSets()
         uniformBufferWrite.pImageInfo = nullptr;        // Optional
         uniformBufferWrite.pTexelBufferView = nullptr;  // Optional
 
+        vk::DescriptorBufferInfo vertBufferInfo;
+        vertBufferInfo.buffer = m_rtVertexBuffer;
+        vertBufferInfo.offset = 0;
+        vertBufferInfo.range = VK_WHOLE_SIZE;
+
+        vk::WriteDescriptorSet vertexBufferWrite;
+        vertexBufferWrite.dstSet = m_rtDescriptorSets[i];
+        vertexBufferWrite.dstBinding = 3;
+        vertexBufferWrite.dstArrayElement = 0;
+        vertexBufferWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+        vertexBufferWrite.descriptorCount = 1;
+        vertexBufferWrite.pBufferInfo = &vertBufferInfo;
+        vertexBufferWrite.pImageInfo = nullptr;        // Optional
+        vertexBufferWrite.pTexelBufferView = nullptr;  // Optional
+
+        vk::DescriptorBufferInfo indexBufferInfo;
+        indexBufferInfo.buffer = m_indexBuffer;
+        indexBufferInfo.offset = 0;
+        indexBufferInfo.range = VK_WHOLE_SIZE;
+
+        vk::WriteDescriptorSet indexBufferWrite;
+        indexBufferWrite.dstSet = m_rtDescriptorSets[i];
+        indexBufferWrite.dstBinding = 4;
+        indexBufferWrite.dstArrayElement = 0;
+        indexBufferWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+        indexBufferWrite.descriptorCount = 1;
+        indexBufferWrite.pBufferInfo = &indexBufferInfo;
+        indexBufferWrite.pImageInfo = nullptr;        // Optional
+        indexBufferWrite.pTexelBufferView = nullptr;  // Optional
+
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
-            asWrite, uniformBufferWrite };
+            asWrite, uniformBufferWrite, vertexBufferWrite, indexBufferWrite };
 
         vkUpdateDescriptorSets(
-            m_device, 2, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
+            m_device, 4, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
             nullptr );
     }
 }
@@ -576,7 +621,7 @@ void BRRender::recordRasterCommandBuffer( vk::CommandBuffer commandBuffer,
     vk::DeviceSize offsets[] = { 0 };
 
     commandBuffer.bindVertexBuffers( 0, 1, vertexBuffers, offsets );
-    commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint16 );
+    commandBuffer.bindIndexBuffer( m_indexBuffer, 0, vk::IndexType::eUint32 );
 
     vkCmdBindDescriptorSets(
         commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.getLayout(),

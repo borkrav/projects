@@ -22,8 +22,7 @@ class BufferAllocator
     template <typename T, typename A>
     vk::Buffer createAndStageBuffer(
         std::string name, std::vector<T, A> const& m_vertices,
-        vk::BufferUsageFlagBits type =
-            static_cast<vk::BufferUsageFlagBits>( 0 ) )
+        vk::BufferUsageFlags type = static_cast<vk::BufferUsageFlags>( 0 ) )
     {
         vk::DeviceSize size = sizeof( m_vertices[0] ) * m_vertices.size();
 
@@ -45,7 +44,7 @@ class BufferAllocator
         std::pair<vk::Buffer, vk::DeviceMemory> final;
 
         // if this has an actual type (vertex buffer, index buffer, etc)
-        if ( type != static_cast<vk::BufferUsageFlagBits>( 0 ) )
+        if ( type != static_cast<vk::BufferUsageFlags>( 0 ) )
         {
             final = createBuffer(
                 size,

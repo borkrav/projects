@@ -8,26 +8,63 @@ layout(binding = 2, set = 0) uniform CameraProperties
     mat4 model;
     mat4 view;
     mat4 proj;
+	vec3 cameraPos;
 } cam;
 
-layout(location = 0) rayPayloadEXT vec3 hitValue;
+
+struct payload {
+	vec3 hitValue;
+	vec3 origin;
+	vec3 direction;
+	bool hit;
+	uint seed;
+}; 
+
+layout(location = 0) rayPayloadEXT payload rayResult;
 
 void main() 
 {
+	vec3 finalColor = vec3(0,0,0);
+
+	// gl_LaunchIDEXT - the work item being processed, one for each X and Y
 	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+
+	// gl_LaunchSizeEXT - width/height of the execution ( image size )
+	// inUV is the UV coordinates, between 0 and 1 - Normalized Device Coordinates
 	const vec2 inUV = pixelCenter/vec2(gl_LaunchSizeEXT.xy);
+
+	// transforms UV to (0,0) being centre of image
 	vec2 d = inUV * 2.0 - 1.0;
 
+	//inverse of the view matrix is the camera matrix - transforms point on camera to world
+	//multiply by 0,0,0 -> transform 0,0,0, this is the camera's origin position - should be equal to cameraPos???
+	//This must be in world space
 	vec4 origin = inverse(cam.view) * vec4(0,0,0,1);
+
+	//Transform NDC to view space
 	vec4 target = inverse(cam.proj) * vec4(d.x, d.y, 1, 1) ;
+
+	//Transform view space to world space
 	vec4 direction = inverse(cam.view) *vec4(normalize(target.xyz), 0) ;
 
 	float tmin = 0.001;
 	float tmax = 10000.0;
 
-    hitValue = vec3(0.0);
+    rayResult.hitValue = vec3(0.0);
 
     traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
 
-	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(hitValue, 0.0));
+	finalColor += rayResult.hitValue;
+
+	for (int i = 0; i < 100; i++){
+		if (rayResult.hit == true){
+
+			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0 /*sbtRecordOffset*/, 0 /*sbtRecordStride*/,
+			0 /*missIndex*/, rayResult.origin.xyz, tmin, rayResult.direction.xyz, tmax, 0 /*payload*/);
+
+			finalColor *= rayResult.hitValue;
+		}
+	}
+
+	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(finalColor, 0.0));
 }
