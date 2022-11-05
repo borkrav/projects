@@ -37,8 +37,12 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     std::vector<VkTransformMatrixKHR> mats;
     mats.push_back( transformMatrix );
 
-    auto transformMatrixBuff =
-        m_alloc->createAndStageBuffer( "BLAS Transform", mats );
+    auto bufferSize = sizeof( mats[0] ) * mats.size();
+    auto transformMatrixBuff = m_alloc->createDeviceBuffer(
+        "BLAS Transform", bufferSize, mats.data(), false,
+        vk::BufferUsageFlagBits::eShaderDeviceAddress |
+            vk::BufferUsageFlagBits::
+                eAccelerationStructureBuildInputReadOnlyKHR );
 
     vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
     vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
@@ -87,8 +91,11 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     // clang-format on
 
     //allocate the blas memory
-    vk::Buffer blas = m_alloc->createAccelStructureBuffer(
-        name + " Buffer", buildSizeInfo.accelerationStructureSize );
+    vk::Buffer blas = m_alloc->createDeviceBuffer(
+        name + " Buffer", buildSizeInfo.accelerationStructureSize, nullptr,
+        false,
+        vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress );
 
     vk::AccelerationStructureCreateInfoKHR createInfo;
     createInfo.buffer = blas;
@@ -110,8 +117,10 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     checkSuccess( result );
 
     //allocate scratch buffer
-    vk::Buffer blasScratch = m_alloc->createScratchBuffer(
-        name + " Scratch", buildSizeInfo.buildScratchSize );
+    vk::Buffer blasScratch = m_alloc->createDeviceBuffer(
+        name + " Scratch", buildSizeInfo.buildScratchSize, nullptr, false,
+        vk::BufferUsageFlagBits::eStorageBuffer |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress );
 
     auto blasScratchAddress = m_alloc->getDeviceAddress( blasScratch );
 
@@ -190,13 +199,13 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     instance.accelerationStructureReference = getAddress( blas );
 
     vk::BufferUsageFlags flags =
-        vk::BufferUsageFlagBits::eTransferDst |
         vk::BufferUsageFlagBits::eShaderDeviceAddress |
         vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
 
-    m_instanceBuff = m_alloc->createVisibleBuffer(
+    m_instanceBuff = m_alloc->createDeviceBuffer(
         name + " instance buffer",
-        sizeof( vk::AccelerationStructureInstanceKHR ), flags, &instance );
+        sizeof( vk::AccelerationStructureInstanceKHR ), &instance, true,
+        flags );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =
@@ -237,8 +246,10 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     // clang-format on
 
     //allocate the tlas memory
-    vk::Buffer tlas = m_alloc->createAccelStructureBuffer(
-        name + " Buffer", sizeInfo.accelerationStructureSize );
+    vk::Buffer tlas = m_alloc->createDeviceBuffer(
+        name + " Buffer", sizeInfo.accelerationStructureSize, nullptr, false,
+        vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress );
 
     vk::AccelerationStructureCreateInfoKHR createInfo;
     createInfo.buffer = tlas;
@@ -260,8 +271,10 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     checkSuccess( result );
 
     //allocate scratch buffer
-    m_tlasScratch = m_alloc->createScratchBuffer( name + " Scratch",
-                                                  sizeInfo.buildScratchSize );
+    m_tlasScratch = m_alloc->createDeviceBuffer(
+        name + " Scratch", sizeInfo.buildScratchSize, nullptr, false,
+        vk::BufferUsageFlagBits::eStorageBuffer |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress );
 
     auto tlasScratchAddress = m_alloc->getDeviceAddress( m_tlasScratch );
 

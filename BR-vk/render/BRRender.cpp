@@ -128,10 +128,16 @@ void BRRender::onMouseMove( int x, int y )
         return;
     }
     if ( m_modelInput )
+    {
         m_modelManip.doManip(
             x, y, static_cast<ModelManip::ManipMode>( m_transformMode ) );
+        m_iteration = 0;
+    }
     else if ( m_camInput )
+    {
         m_cameraManip.doManip( x, y );
+        m_iteration = 0;
+    }
 }
 
 void BRRender::loadModel( std::string name )
@@ -191,14 +197,27 @@ void BRRender::loadModel( std::string name )
         }
     }
 
-    m_vertexBuffer = m_bufferAlloc.createAndStageBuffer(
-        "Vertex", m_vertices, vk::BufferUsageFlagBits::eVertexBuffer );
-    m_rtVertexBuffer = m_bufferAlloc.createAndStageBuffer(
-        "RTVertex", rawVerts, vk::BufferUsageFlagBits::eStorageBuffer );
-    m_indexBuffer = m_bufferAlloc.createAndStageBuffer(
-        "Index", m_indices,
+    auto bufferSize = m_vertices.size() * sizeof( m_vertices[0] );
+    m_vertexBuffer = m_bufferAlloc.createDeviceBuffer(
+        "Vertex", bufferSize, m_vertices.data(), false,
+        vk::BufferUsageFlagBits::eVertexBuffer );
+
+    bufferSize = rawVerts.size() * sizeof( rawVerts[0] );
+    m_rtVertexBuffer = m_bufferAlloc.createDeviceBuffer(
+        "RTVertex", bufferSize, rawVerts.data(), false,
+        vk::BufferUsageFlagBits::eStorageBuffer |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress |
+            vk::BufferUsageFlagBits::
+                eAccelerationStructureBuildInputReadOnlyKHR );
+
+    bufferSize = m_indices.size() * sizeof( m_indices[0] );
+    m_indexBuffer = m_bufferAlloc.createDeviceBuffer(
+        "Index", bufferSize, m_indices.data(), false,
         vk::BufferUsageFlagBits::eIndexBuffer |
-            vk::BufferUsageFlagBits::eStorageBuffer );
+            vk::BufferUsageFlagBits::eStorageBuffer |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress |
+            vk::BufferUsageFlagBits::
+                eAccelerationStructureBuildInputReadOnlyKHR );
 }
 
 void BRRender::initUI()
@@ -271,8 +290,9 @@ void BRRender::initVulkan()
             "Render Finish Semaphore for frame " + i ) );
         m_inFlightFences.emplace_back(
             m_syncMgr.createFence( "In Flight Fence for frame " + i ) );
-        m_uniformBuffers.emplace_back( m_bufferAlloc.createUniformBuffer(
-            "Uniform buffer", sizeof( UniformBufferObject ) ) );
+        m_uniformBuffers.emplace_back( m_bufferAlloc.createDeviceBuffer(
+            "Uniform buffer", sizeof( UniformBufferObject ), nullptr, true,
+            vk::BufferUsageFlagBits::eUniformBuffer ) );
     }
 
     initRaster();
@@ -296,6 +316,16 @@ void BRRender::createDepthBuffer()
         vk::ImageAspectFlagBits::eDepth );
 }
 
+void BRRender::createAccumulationBuffer()
+{
+    auto extent = AppState::instance().getSwapchainExtent();
+    vk::DeviceSize size = extent.width * extent.height * sizeof( glm::vec4 );
+
+    m_accBuffer = m_bufferAlloc.createDeviceBuffer(
+        "Accumulation Buffer", size, nullptr, false,
+        vk::BufferUsageFlagBits::eStorageBuffer );
+}
+
 void BRRender::initRaster()
 {
     createDepthBuffer();
@@ -312,6 +342,8 @@ void BRRender::initRT()
     m_renderPass.createRT( "RT Renderpass" );
     createAS();
 
+    createAccumulationBuffer();
+
     m_rtDescriptorSetLayout = m_descMgr.createLayout(
         "RT Pipeline Descriptor Set Layout",
         std::vector<BR::DescMgr::Binding>{
@@ -324,7 +356,9 @@ void BRRender::initRT()
             { 3, vk::DescriptorType::eStorageBuffer, 1,
               vk::ShaderStageFlagBits::eClosestHitKHR },
             { 4, vk::DescriptorType::eStorageBuffer, 1,
-              vk::ShaderStageFlagBits::eClosestHitKHR } } );
+              vk::ShaderStageFlagBits::eClosestHitKHR },
+            { 5, vk::DescriptorType::eStorageBuffer, 1,
+              vk::ShaderStageFlagBits::eRaygenKHR } } );
 
     m_pipeline.createRT( "RT Pipeline", m_rtDescriptorSetLayout );
     createSBT();
@@ -369,15 +403,16 @@ void BRRender::createSBT()
         vk::BufferUsageFlagBits::eShaderDeviceAddress;
 
     //create 3 buffers, each holding the address of the shader
-    m_raygenSBT = m_bufferAlloc.createVisibleBuffer(
-        "RayGen SBT", handleSize, bufferUsageFlags,
-        shaderHandleStorage.data() );
-    m_missSBT = m_bufferAlloc.createVisibleBuffer(
-        "Miss SBT", handleSize, bufferUsageFlags,
-        shaderHandleStorage.data() + handleSizeAligned );
-    m_hitSBT = m_bufferAlloc.createVisibleBuffer(
-        "Hit SBT", handleSize, bufferUsageFlags,
-        shaderHandleStorage.data() + handleSizeAligned * 2 );
+    m_raygenSBT = m_bufferAlloc.createDeviceBuffer( "RayGen SBT", handleSize,
+                                                    shaderHandleStorage.data(),
+                                                    true, bufferUsageFlags );
+    m_missSBT = m_bufferAlloc.createDeviceBuffer(
+        "Miss SBT", handleSize, shaderHandleStorage.data() + handleSizeAligned,
+        true, bufferUsageFlags );
+    m_hitSBT = m_bufferAlloc.createDeviceBuffer(
+        "Hit SBT", handleSize,
+        shaderHandleStorage.data() + handleSizeAligned * 2, true,
+        bufferUsageFlags );
 }
 
 void BRRender::createRTDescriptorSets()
@@ -449,11 +484,27 @@ void BRRender::createRTDescriptorSets()
         indexBufferWrite.pImageInfo = nullptr;        // Optional
         indexBufferWrite.pTexelBufferView = nullptr;  // Optional
 
+        vk::DescriptorBufferInfo accelBufferInfo;
+        accelBufferInfo.buffer = m_accBuffer;
+        accelBufferInfo.offset = 0;
+        accelBufferInfo.range = VK_WHOLE_SIZE;
+
+        vk::WriteDescriptorSet accelBufferWrite;
+        accelBufferWrite.dstSet = m_rtDescriptorSets[i];
+        accelBufferWrite.dstBinding = 5;
+        accelBufferWrite.dstArrayElement = 0;
+        accelBufferWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+        accelBufferWrite.descriptorCount = 1;
+        accelBufferWrite.pBufferInfo = &accelBufferInfo;
+        accelBufferWrite.pImageInfo = nullptr;        // Optional
+        accelBufferWrite.pTexelBufferView = nullptr;  // Optional
+
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
-            asWrite, uniformBufferWrite, vertexBufferWrite, indexBufferWrite };
+            asWrite, uniformBufferWrite, vertexBufferWrite, indexBufferWrite,
+            accelBufferWrite };
 
         vkUpdateDescriptorSets(
-            m_device, 4, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
+            m_device, 5, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
             nullptr );
     }
 }
@@ -502,12 +553,41 @@ void BRRender::recreateSwapchain()
     m_device.waitIdle();
 
     m_bufferAlloc.free( m_depthBuffer );
+    m_bufferAlloc.free( m_accBuffer );
 
     m_framebuffer.destroy();
     AppState::instance().recreateSwapchain();
     createDepthBuffer();
+    createAccumulationBuffer();
     m_framebuffer.create( "Swapchain Frame buffer", m_renderPass,
                           m_depthBufferView );
+
+    m_iteration = 0;
+
+    for ( int i : std::views::iota( 0, MAX_FRAMES_IN_FLIGHT ) )
+    {
+        vk::DescriptorBufferInfo accelBufferInfo;
+        accelBufferInfo.buffer = m_accBuffer;
+        accelBufferInfo.offset = 0;
+        accelBufferInfo.range = VK_WHOLE_SIZE;
+
+        vk::WriteDescriptorSet accelBufferWrite;
+        accelBufferWrite.dstSet = m_rtDescriptorSets[i];
+        accelBufferWrite.dstBinding = 5;
+        accelBufferWrite.dstArrayElement = 0;
+        accelBufferWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+        accelBufferWrite.descriptorCount = 1;
+        accelBufferWrite.pBufferInfo = &accelBufferInfo;
+        accelBufferWrite.pImageInfo = nullptr;        // Optional
+        accelBufferWrite.pTexelBufferView = nullptr;  // Optional
+
+        std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
+            accelBufferWrite };
+
+        vkUpdateDescriptorSets(
+            m_device, 1, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
+            nullptr );
+    }
 }
 
 void BRRender::updateUniformBuffer( uint32_t currentImage )
@@ -528,11 +608,14 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
 
     ubo.cameraPos = m_cameraManip.getEye();
 
-    auto mem = m_bufferAlloc.getMemory( m_uniformBuffers[currentImage] );
+    ubo.iteration = ++m_iteration;
 
-    void* data = m_device.mapMemory( mem, 0, sizeof( ubo ) );
-    memcpy( data, &ubo, sizeof( ubo ) );
-    m_device.unmapMemory( mem );
+    ubo.accumulate = m_rtAccumulate;
+
+    ubo.mode = m_rtType;
+
+    m_bufferAlloc.updateVisibleBuffer( m_uniformBuffers[currentImage],
+                                       sizeof( ubo ), &ubo );
 
     m_asBuilder.updateTlas( m_tlas, m_blas, ubo.model );
 }
@@ -720,7 +803,9 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
     AppState::instance().vkCmdTraceRaysKHR(
         commandBuffer, &raygenShaderSbtEntry, &missShaderSbtEntry,
         &hitShaderSbtEntry, &callableShaderSbtEntry, extent.width,
-        extent.height, 1 );
+        (extent.height/2)*2, 1 );
+    //Height needs to be multiple of 2, not sure why, otherwise accumulation breaks
+    //TODO: Figure out why this is happening
 
     imageBarrier( commandBuffer, srcImage, range,
                   vk::AccessFlagBits::eShaderWrite,
@@ -768,16 +853,23 @@ void BRRender::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
 
 void BRRender::drawUI()
 {
+    bool oldAcc = m_rtAccumulate;
+    int oldType = m_rtType;
+
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     ImGui::Begin( "Menu", NULL, ImGuiWindowFlags_AlwaysAutoResize );
     ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)",
                  1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
     ImGui::Checkbox( "Ray Tracing", &m_rtMode );
+    ImGui::Checkbox( "Accumulation", &m_rtAccumulate );
 
     const char* items[] = { "Rotate", "Translate", "Scale" };
     ImGui::Combo( "Model Manip", &m_transformMode, items,
                   IM_ARRAYSIZE( items ) );
+
+    const char* rtItems[] = { "Mirror", "Glossy", "Sharp", "AO" };
+    ImGui::Combo( "RT mode", &m_rtType, rtItems, IM_ARRAYSIZE( rtItems ) );
 
     if ( ImGui::Button( "Reset Transforms" ) )
     {
@@ -790,6 +882,9 @@ void BRRender::drawUI()
         takeScreenshot();
     }
     ImGui::End();
+
+    if ( oldAcc != m_rtAccumulate || oldType != m_rtType )
+        m_iteration = 0;
 }
 
 void BRRender::drawFrame()

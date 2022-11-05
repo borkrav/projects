@@ -65,6 +65,8 @@ class BRRender
     vk::Buffer m_rtVertexBuffer;
     vk::Buffer m_indexBuffer;
 
+    vk::Buffer m_accBuffer;
+
     vk::Image m_depthBuffer;
     vk::ImageView m_depthBufferView;
 
@@ -92,6 +94,9 @@ class BRRender
     int m_transformMode = 0;
     bool m_modelInput = false;
     bool m_camInput = false;
+    int m_iteration = 0;
+    bool m_rtAccumulate = true;
+    int m_rtType = 0;
 
     struct UniformBufferObject
     {
@@ -99,6 +104,9 @@ class BRRender
         glm::mat4 view;
         glm::mat4 proj;
         glm::vec3 cameraPos;
+        int iteration;
+        bool accumulate;
+        int mode;
     };
 
     void initWindow();
@@ -132,6 +140,8 @@ class BRRender
     void createDescriptorSets();
     void updateUniformBuffer( uint32_t currentImage );
     void createDepthBuffer();
+
+    void createAccumulationBuffer();
 
     void createAS();
     void createSBT();

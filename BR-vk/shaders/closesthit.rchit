@@ -11,6 +11,7 @@ struct payload {
 	vec3 direction;
 	bool hit;
 	uint seed;
+  uint mode;
 }; 
 
 layout(location = 0) rayPayloadInEXT payload rayResult;
@@ -50,6 +51,8 @@ void main()
 
   //this is for safety - to avoid infinite loop
   int count = 0;
+
+  rng_state = rayResult.seed;
   
   do{ 
   
@@ -79,14 +82,23 @@ void main()
   vec3 originalVector = gl_WorldRayDirectionEXT - gl_WorldRayOriginEXT;
   vec3 bounce = reflect(originalVector, objectNormal.xyz);
 
+  vec3 target = vec3(0);
 
   // Mirror Reflections
-  vec3 target = worldSpaceIntersection + bounce /*+ dir*/;
+  if (rayResult.mode == 0)
+    target = worldSpaceIntersection + bounce;
 
-  //Occlusion
-  //vec3 target = worldSpaceIntersection + objectNormal /*+ dir*/;
+  // Glossy Reflections
+  if (rayResult.mode == 1)
+    target = worldSpaceIntersection + bounce + dir;
 
-  //vec3 target = worldSpaceIntersection + objectNormal + dir;
+  //Sharp Occlusion
+  if (rayResult.mode == 2)
+    target = worldSpaceIntersection + objectNormal;
+
+  //Ambient Occlusion
+  if (rayResult.mode == 3)
+    target = worldSpaceIntersection + objectNormal + dir;
 
   // Return it as a color
 
@@ -96,6 +108,7 @@ void main()
     rayResult.origin = worldSpaceIntersection;
     rayResult.direction = target - worldSpaceIntersection;
     rayResult.hit = true;
+    rayResult.seed = rng_state;
  }
 
   else 

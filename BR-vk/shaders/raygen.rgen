@@ -1,5 +1,8 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
+#extension GL_GOOGLE_include_directive : enable
+
+#include "rng.glsl"
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D image;
@@ -9,8 +12,15 @@ layout(binding = 2, set = 0) uniform CameraProperties
     mat4 view;
     mat4 proj;
 	vec3 cameraPos;
+	uint iteration;
+	bool accumulate;
+	uint mode;
 } cam;
 
+layout(binding = 5, set = 0) buffer accumulation
+{
+	vec4 [] acc;
+};
 
 struct payload {
 	vec3 hitValue;
@@ -18,6 +28,7 @@ struct payload {
 	vec3 direction;
 	bool hit;
 	uint seed;
+	uint mode;
 }; 
 
 layout(location = 0) rayPayloadEXT payload rayResult;
@@ -26,8 +37,20 @@ void main()
 {
 	vec3 finalColor = vec3(0,0,0);
 
+	uint index = gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x;
+
+	//initialize RNG state, all rays will start with this seed
+	rng_state = wang_hash(index * uint(cam.iteration));
+	rayResult.seed = rng_state;
+	rayResult.mode = cam.mode;
+
+	//ensure every iteration has different pixel centre, in order to converge on smooth image
+	float offset1 = float(rand_xorshift()) * (1.0 / 4294967296.0);
+	float offset2 = float(rand_xorshift()) * (1.0 / 4294967296.0);
+
+
 	// gl_LaunchIDEXT - the work item being processed, one for each X and Y
-	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(offset1, offset2);
 
 	// gl_LaunchSizeEXT - width/height of the execution ( image size )
 	// inUV is the UV coordinates, between 0 and 1 - Normalized Device Coordinates
@@ -66,5 +89,15 @@ void main()
 		}
 	}
 
-	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(finalColor, 0.0));
+	if (cam.iteration == 1){
+		acc[index] = vec4(0.f);
+	}
+
+
+	if ( cam.accumulate )
+		acc[index].xyz += finalColor.xyz;
+	
+
+
+	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(cam.accumulate ? acc[index].xyz / cam.iteration : finalColor , 0.0));
 }

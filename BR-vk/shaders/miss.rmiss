@@ -7,6 +7,7 @@ struct payload {
 	vec3 direction;
 	bool hit;
 	uint seed;
+	uint mode;
 }; 
 
 layout(location = 0) rayPayloadInEXT payload rayResult;

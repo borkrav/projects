@@ -42,6 +42,84 @@ BufferAllocator::~BufferAllocator()
     assert( m_alloc.empty() );
 }
 
+vk::Buffer BufferAllocator::createDeviceBuffer( std::string name,
+                                                vk::DeviceSize size,
+                                                void* srcData, bool hostVisible,
+                                                vk::BufferUsageFlags type )
+{
+    assert( size > 0 );
+
+    std::pair<vk::Buffer, vk::DeviceMemory> final;
+
+    //Buffer Creation
+
+    // host visible/host coherent
+    if ( hostVisible )
+    {
+        final = createBuffer( size, type,
+                              vk::MemoryPropertyFlagBits::eHostVisible |
+                                  vk::MemoryPropertyFlagBits::eHostCoherent );
+    }
+    // device local, transfer destination
+    else if ( !hostVisible && srcData != nullptr )
+    {
+        final =
+            createBuffer( size, vk::BufferUsageFlagBits::eTransferDst | type,
+                          vk::MemoryPropertyFlagBits::eDeviceLocal );
+    }
+    // device local
+    else
+    {
+        final = createBuffer( size, type,
+                              vk::MemoryPropertyFlagBits::eDeviceLocal );
+    }
+
+    auto resultBuffer = final.first;
+    auto resultMem = final.second;
+
+    m_alloc[resultBuffer] = resultMem;
+
+    DEBUG_NAME( resultMem, "mem " + name );
+    DEBUG_NAME( resultBuffer, "buffer " + name );
+
+    // Copying Data
+    if ( srcData != nullptr )
+    {
+        // Regular memcpy
+        if ( hostVisible )
+        {
+            void* dst = m_device.mapMemory( resultMem, 0, size );
+            memcpy( dst, srcData, size );
+            m_device.unmapMemory( resultMem );
+        }
+        // Stage and copy
+        else
+        {
+            auto stage =
+                createBuffer( size, vk::BufferUsageFlagBits::eTransferSrc,
+                              vk::MemoryPropertyFlagBits::eHostVisible |
+                                  vk::MemoryPropertyFlagBits::eHostCoherent );
+
+            auto stageMem = stage.second;
+            auto stageBuffer = stage.first;
+
+            DEBUG_NAME( stageMem, "stageMem " + name );
+            DEBUG_NAME( stageBuffer, "stageBuffer " + name );
+
+            void* data = m_device.mapMemory( stageMem, 0, size );
+            memcpy( data, srcData, (size_t)size );
+            m_device.unmapMemory( stageMem );
+
+            copyBuffer( stageBuffer, resultBuffer, size );
+
+            m_device.destroyBuffer( stageBuffer );
+            m_device.freeMemory( stageMem );
+        }
+    }
+
+    return resultBuffer;
+}
+
 std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
     vk::DeviceSize size, vk::BufferUsageFlags usage,
     vk::MemoryPropertyFlags properties )
@@ -131,19 +209,24 @@ void BufferAllocator::copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
     m_copyPool.freeBuffer( copyBuffer );
 }
 
-vk::Buffer BufferAllocator::createUniformBuffer( std::string name,
-                                                 vk::DeviceSize bufferSize )
+void BufferAllocator::updateVisibleBuffer( vk::Buffer buff, vk::DeviceSize size,
+                                           void* data )
 {
-    auto result =
-        createBuffer( bufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
-                      vk::MemoryPropertyFlagBits::eHostVisible |
-                          vk::MemoryPropertyFlagBits::eHostCoherent );
+    auto mem = getMemory( buff );
 
-    DEBUG_NAME( result.first, name );
+    void* dst = m_device.mapMemory( mem, 0, size );
+    memcpy( dst, data, size );
+    m_device.unmapMemory( mem );
+}
 
-    m_alloc[result.first] = result.second;
+vk::DeviceMemory BufferAllocator::getMemory(
+    std::variant<vk::Buffer, vk::Image> buffer )
+{
+    auto it = m_alloc.find( buffer );
 
-    return result.first;
+    assert( it != m_alloc.end() );
+
+    return it->second;
 }
 
 vk::Image BufferAllocator::createImage( std::string name, uint32_t width,
@@ -243,87 +326,6 @@ vk::ImageView BufferAllocator::createImageView(
     {
         throw std::runtime_error( "failed to create " + name );
     }
-}
-
-vk::Buffer BufferAllocator::createAccelStructureBuffer( std::string name,
-                                                        vk::DeviceSize size )
-{
-    auto result = createBuffer(
-        size,
-        vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress,
-        vk::MemoryPropertyFlagBits::eDeviceLocal );
-
-    auto buff = result.first;
-    auto mem = result.second;
-
-    m_alloc[buff] = mem;
-
-    DEBUG_NAME( buff, name );
-
-    return buff;
-}
-
-vk::Buffer BufferAllocator::createScratchBuffer( std::string name,
-                                                 vk::DeviceSize size )
-{
-    auto result =
-        createBuffer( size,
-                      vk::BufferUsageFlagBits::eStorageBuffer |
-                          vk::BufferUsageFlagBits::eShaderDeviceAddress,
-                      vk::MemoryPropertyFlagBits::eDeviceLocal );
-
-    auto buff = result.first;
-    auto mem = result.second;
-
-    m_alloc[buff] = mem;
-
-    DEBUG_NAME( buff, name );
-
-    return buff;
-}
-
-vk::Buffer BufferAllocator::createVisibleBuffer( std::string name,
-                                                 vk::DeviceSize size,
-                                                 vk::BufferUsageFlags usage,
-                                                 void* data )
-{
-    auto result = createBuffer( size, usage,
-                                vk::MemoryPropertyFlagBits::eHostVisible |
-                                    vk::MemoryPropertyFlagBits::eHostCoherent );
-
-    auto buff = result.first;
-    auto mem = result.second;
-
-    m_alloc[buff] = mem;
-
-    DEBUG_NAME( buff, name );
-
-    void* dst = m_device.mapMemory( mem, 0, size );
-    memcpy( dst, data, size );
-    m_device.unmapMemory( mem );
-
-    return buff;
-}
-
-void BufferAllocator::updateVisibleBuffer( vk::Buffer buff, vk::DeviceSize size,
-                                           void* data )
-{
-    auto mem = getMemory( buff );
-
-    void* dst = m_device.mapMemory( mem, 0, size );
-    memcpy( dst, data, size );
-    m_device.unmapMemory( mem );
-}
-
-vk::DeviceMemory BufferAllocator::getMemory(
-    std::variant<vk::Buffer, vk::Image> buffer )
-{
-    auto it = m_alloc.find( buffer );
-
-    assert( it != m_alloc.end() );
-
-    return it->second;
 }
 
 uint64_t BufferAllocator::getDeviceAddress( VkBuffer buffer )
