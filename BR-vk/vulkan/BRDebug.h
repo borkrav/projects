@@ -9,7 +9,7 @@ namespace BR
 class Debug
 {
    public:
-    void create( std::string name );
+    void create( std::string name, vk::Device device );
 
     void setName( const uint64_t object, const std::string& name,
                   VkObjectType t );

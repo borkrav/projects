@@ -4,17 +4,70 @@
 
 using namespace BR;
 
-AppState::AppState() : created( false )
+AppState::AppState()
 {
+    glfwInit();
+    glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
+    m_window =
+        glfwCreateWindow( m_iWidth, m_iHeight, "Vulkan", nullptr, nullptr );
+    init( m_window, enableValidationLayers );
 }
 
 AppState::~AppState()
 {
-    assert( created );
-
     m_swapchain.destroy();
     m_surface.destroy();
     m_instance.destroy();
+    m_descMgr.destroy();
+    m_syncMgr.destroy();
+    m_memoryMgr.destroy();
+}
+
+void AppState::init( GLFWwindow* window, bool debug )
+{
+    m_window = window;
+
+    m_instance.create( debug );
+    m_surface.create( window, m_instance.m_instance.get() );
+
+    const std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+        VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+        VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+    };
+
+    m_device.create( "GPU", deviceExtensions, m_instance.m_instance.get(),
+                     m_surface.m_surface );
+
+#ifdef NDEBUG
+#else
+    m_debug.create( " RTX 3080 ", m_device.m_logicalDevice.get() );
+#endif
+
+    m_swapchain.create( "Swapchain", window, m_device.m_physicalDevice,
+                        m_device.m_logicalDevice.get(), m_device.m_index,
+                        m_surface.m_surface );
+
+#ifdef NDEBUG
+#else
+    m_debug.setName( m_swapchain.m_swapChain, "Swapchain" );
+#endif
+
+    m_swapchain.createImageViews( "Swapchain image view " );
+
+#ifdef NDEBUG
+#else
+    for ( int i = 0; i < m_swapchain.m_swapChainImageViews.size(); ++i )
+        m_debug.setName( m_swapchain.m_swapChainImageViews[i],
+                         "Swapchain image view " + i );
+#endif
+
+    initRT();
 }
 
 void AppState::getFunctionPointers()
@@ -81,97 +134,55 @@ void AppState::initRT()
     vkGetPhysicalDeviceFeatures2( gpu, &deviceFeatures2 );
 }
 
-void AppState::init( GLFWwindow* window, bool debug )
-{
-    if ( created )
-        return;
-
-    created = true;
-
-    m_window = window;
-
-    m_instance.create( debug );
-    m_surface.create( window );
-
-    const std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-        VK_KHR_SPIRV_1_4_EXTENSION_NAME,
-        VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
-    };
-
-    m_device.create( "GPU", deviceExtensions );
-
-#ifdef NDEBUG
-#else
-    m_debug.create( " RTX 3080 " );
-#endif
-
-    m_swapchain.create( "Swapchain", window );
-    m_swapchain.createImageViews( "Swapchain image view " );
-
-    initRT();
-}
-
 void AppState::recreateSwapchain()
 {
     //destroy old swapchain
     m_swapchain.destroy();
 
     //create new swapchain
-    m_swapchain.create( "Swapchain", m_window );
+    m_swapchain.create( "Swapchain", m_window, m_device.m_physicalDevice,
+                        m_device.m_logicalDevice.get(), m_device.m_index,
+                        m_surface.m_surface );
     m_swapchain.createImageViews( "Swapchain image view " );
 }
 
 vk::Instance AppState::getInstance()
 {
-    assert( created );
     return m_instance.m_instance.get();
 }
 
 vk::PhysicalDevice AppState::getPhysicalDevice()
 {
-    assert( created );
     return m_device.m_physicalDevice;
 }
 
 vk::Device AppState::getLogicalDevice()
 {
-    assert( created );
     return m_device.m_logicalDevice.get();
 }
 
 vk::Queue AppState::getGraphicsQueue()
 {
-    assert( created );
     return m_device.m_graphicsQueue;
 }
 
 int AppState::getFamilyIndex()
 {
-    assert( created );
     return m_device.m_index;
 }
 
 vk::SurfaceKHR AppState::getSurface()
 {
-    assert( created );
     return m_surface.m_surface;
 }
 
 vk::SwapchainKHR AppState::getSwapchain()
 {
-    assert( created );
     return m_swapchain.m_swapChain;
 }
 
 vk::Image AppState::getSwapchainImage( int index )
 {
-    assert( created );
     assert( index >= 0 && index < m_swapchain.m_swapChainImages.size() );
 
     return m_swapchain.m_swapChainImages[index];
@@ -179,20 +190,42 @@ vk::Image AppState::getSwapchainImage( int index )
 
 vk::Format AppState::getSwapchainFormat()
 {
-    assert( created );
     return m_swapchain.m_swapChainFormat;
 }
 
 vk::Extent2D& AppState::getSwapchainExtent()
 {
-    assert( created );
     return m_swapchain.m_swapChainExtent;
 }
 
 std::vector<vk::ImageView>& AppState::getImageViews()
 {
-    assert( created );
     return m_swapchain.m_swapChainImageViews;
+}
+
+BR::DescMgr& AppState::getDescMgr()
+{
+    return m_descMgr;
+}
+
+BR::SyncMgr& AppState::getSyncMgr()
+{
+    return m_syncMgr;
+}
+
+BR::MemoryMgr& AppState::getMemoryMgr()
+{
+    return m_memoryMgr;
+}
+
+GLFWwindow* AppState::getWindow()
+{
+    return m_window;
+}
+
+void AppState::takeScreenshot( CommandPool& pool, int frame )
+{
+    m_swapchain.takeScreenshot( pool, frame );
 }
 
 #ifdef NDEBUG

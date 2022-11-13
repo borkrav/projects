@@ -2,9 +2,9 @@
 
 using namespace BR;
 
-void Debug::create( std::string name )
+void Debug::create( std::string name, vk::Device device )
 {
-    m_device = AppState::instance().getLogicalDevice();
+    m_device = device;
     setName( (uint64_t)(VkDevice)m_device, name, VK_OBJECT_TYPE_DEVICE );
 }
 

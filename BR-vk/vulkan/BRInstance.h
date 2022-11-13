@@ -9,16 +9,16 @@ class Instance
 {
     friend class AppState;
 
-    vk::UniqueInstance m_instance;
-
    private:
     Instance();
     ~Instance();
+    Instance( const Instance& ) = delete;
 
     void create( bool enableValidationLayers );
     void createDebugMessenger();
     void destroy();
 
+    vk::UniqueInstance m_instance;
     VkDebugUtilsMessengerEXT m_debugMessenger;
     bool m_enableValidationLayers;
 };

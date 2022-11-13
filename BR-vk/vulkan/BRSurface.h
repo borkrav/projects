@@ -13,8 +13,9 @@ class Surface
    private:
     Surface();
     ~Surface();
+    Surface( const Surface& ) = delete;
 
-    void create( GLFWwindow* m_window );
+    void create( GLFWwindow* m_window, vk::Instance instance );
     void destroy();
 
     VkSurfaceKHR m_surface;

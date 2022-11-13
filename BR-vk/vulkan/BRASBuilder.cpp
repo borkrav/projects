@@ -5,7 +5,7 @@
 
 using namespace BR;
 
-ASBuilder::ASBuilder() : m_alloc( nullptr )
+ASBuilder::ASBuilder() : m_alloc( AppState::instance().getMemoryMgr() )
 {
 }
 
@@ -14,10 +14,9 @@ ASBuilder::~ASBuilder()
     assert( m_structures.empty() );
 }
 
-void ASBuilder::create( BufferAllocator& mainAlloc )
+void ASBuilder::create()
 {
     m_device = AppState::instance().getLogicalDevice();
-    m_alloc = &mainAlloc;
     m_pool.create( "ASBuilder Command Pool",
                    vk::CommandPoolCreateFlagBits::eTransient );
 }
@@ -38,7 +37,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     mats.push_back( transformMatrix );
 
     auto bufferSize = sizeof( mats[0] ) * mats.size();
-    auto transformMatrixBuff = m_alloc->createDeviceBuffer(
+    auto transformMatrixBuff = m_alloc.createDeviceBuffer(
         "BLAS Transform", bufferSize, mats.data(), false,
         vk::BufferUsageFlagBits::eShaderDeviceAddress |
             vk::BufferUsageFlagBits::
@@ -49,11 +48,11 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     vk::DeviceOrHostAddressConstKHR transformBufferDeviceAddress{};
 
     vertexBufferDeviceAddress.deviceAddress =
-        m_alloc->getDeviceAddress( vertexBuffer );
+        m_alloc.getDeviceAddress( vertexBuffer );
     indexBufferDeviceAddress.deviceAddress =
-        m_alloc->getDeviceAddress( indexBuffer );
+        m_alloc.getDeviceAddress( indexBuffer );
     transformBufferDeviceAddress.deviceAddress =
-        m_alloc->getDeviceAddress( transformMatrixBuff );
+        m_alloc.getDeviceAddress( transformMatrixBuff );
 
     //Description of the geometry, where the index and vertex data is
     vk::AccelerationStructureGeometryKHR geometry;
@@ -91,7 +90,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     // clang-format on
 
     //allocate the blas memory
-    vk::Buffer blas = m_alloc->createDeviceBuffer(
+    vk::Buffer blas = m_alloc.createDeviceBuffer(
         name + " Buffer", buildSizeInfo.accelerationStructureSize, nullptr,
         false,
         vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
@@ -117,12 +116,12 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     checkSuccess( result );
 
     //allocate scratch buffer
-    vk::Buffer blasScratch = m_alloc->createDeviceBuffer(
+    vk::Buffer blasScratch = m_alloc.createDeviceBuffer(
         name + " Scratch", buildSizeInfo.buildScratchSize, nullptr, false,
         vk::BufferUsageFlagBits::eStorageBuffer |
             vk::BufferUsageFlagBits::eShaderDeviceAddress );
 
-    auto blasScratchAddress = m_alloc->getDeviceAddress( blasScratch );
+    auto blasScratchAddress = m_alloc.getDeviceAddress( blasScratch );
 
     //BLAS description
     vk::AccelerationStructureBuildGeometryInfoKHR asInfo;
@@ -176,7 +175,7 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
     m_addresses[handle] = blasAddress;
     DEBUG_NAME( handle, name );
 
-    m_alloc->free( blasScratch );
+    m_alloc.free( blasScratch );
 
     return handle;
 }
@@ -202,14 +201,14 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
         vk::BufferUsageFlagBits::eShaderDeviceAddress |
         vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR;
 
-    m_instanceBuff = m_alloc->createDeviceBuffer(
+    m_instanceBuff = m_alloc.createDeviceBuffer(
         name + " instance buffer",
         sizeof( vk::AccelerationStructureInstanceKHR ), &instance, true,
         flags );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =
-        m_alloc->getDeviceAddress( m_instanceBuff );
+        m_alloc.getDeviceAddress( m_instanceBuff );
 
     //geomery
     vk::AccelerationStructureGeometryKHR geometry;
@@ -246,7 +245,7 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     // clang-format on
 
     //allocate the tlas memory
-    vk::Buffer tlas = m_alloc->createDeviceBuffer(
+    vk::Buffer tlas = m_alloc.createDeviceBuffer(
         name + " Buffer", sizeInfo.accelerationStructureSize, nullptr, false,
         vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
             vk::BufferUsageFlagBits::eShaderDeviceAddress );
@@ -271,12 +270,12 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     checkSuccess( result );
 
     //allocate scratch buffer
-    m_tlasScratch = m_alloc->createDeviceBuffer(
+    m_tlasScratch = m_alloc.createDeviceBuffer(
         name + " Scratch", sizeInfo.buildScratchSize, nullptr, false,
         vk::BufferUsageFlagBits::eStorageBuffer |
             vk::BufferUsageFlagBits::eShaderDeviceAddress );
 
-    auto tlasScratchAddress = m_alloc->getDeviceAddress( m_tlasScratch );
+    auto tlasScratchAddress = m_alloc.getDeviceAddress( m_tlasScratch );
 
     vk::AccelerationStructureBuildGeometryInfoKHR asInfo;
     asInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
@@ -349,13 +348,13 @@ void ASBuilder::updateTlas( vk::AccelerationStructureKHR tlas,
                      VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
     instance.accelerationStructureReference = getAddress( blas );
 
-    m_alloc->updateVisibleBuffer(
+    m_alloc.updateVisibleBuffer(
         m_instanceBuff, sizeof( vk::AccelerationStructureInstanceKHR ),
         &instance );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =
-        m_alloc->getDeviceAddress( m_instanceBuff );
+        m_alloc.getDeviceAddress( m_instanceBuff );
 
     //geomery
     vk::AccelerationStructureGeometryKHR geometry;
@@ -366,7 +365,7 @@ void ASBuilder::updateTlas( vk::AccelerationStructureKHR tlas,
     geometry.geometry.instances.arrayOfPointers = false;
     geometry.geometry.instances.data = instanceDataDeviceAddress;
 
-    auto tlasScratchAddress = m_alloc->getDeviceAddress( m_tlasScratch );
+    auto tlasScratchAddress = m_alloc.getDeviceAddress( m_tlasScratch );
 
     vk::AccelerationStructureBuildGeometryInfoKHR asInfo;
     asInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
@@ -422,5 +421,5 @@ void ASBuilder::destroy()
 
     m_addresses.clear();
     m_structures.clear();
-    m_alloc->free( m_tlasScratch );
+    m_alloc.free( m_tlasScratch );
 }

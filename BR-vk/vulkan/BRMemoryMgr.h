@@ -13,11 +13,11 @@
 
 namespace BR
 {
-class BufferAllocator
+class MemoryMgr
 {
+    friend class AppState;
+
    public:
-    BufferAllocator();
-    ~BufferAllocator();
 
     vk::Buffer createDeviceBuffer(
         std::string name, vk::DeviceSize size, void* srcData, bool hostVisible,
@@ -45,6 +45,12 @@ class BufferAllocator
     void destroy();
 
    private:
+
+    MemoryMgr();
+    ~MemoryMgr();
+
+    MemoryMgr( const MemoryMgr& ) = delete;
+
     // Creates a buffer on the GPU
     std::pair<vk::Buffer, vk::DeviceMemory> createBuffer(
         vk::DeviceSize size, vk::BufferUsageFlags usage,

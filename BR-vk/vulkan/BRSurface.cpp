@@ -15,10 +15,10 @@ Surface::~Surface()
     assert( m_surface == VK_NULL_HANDLE );
 }
 
-void Surface::create( GLFWwindow* m_window )
+void Surface::create( GLFWwindow* m_window, vk::Instance instance )
 {
     VkResult result = glfwCreateWindowSurface(
-        AppState::instance().getInstance(), m_window, nullptr, &m_surface );
+        instance, m_window, nullptr, &m_surface );
     CHECK_SUCCESS( result );
 }
 

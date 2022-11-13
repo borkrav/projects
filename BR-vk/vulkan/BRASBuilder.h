@@ -1,6 +1,6 @@
 #pragma once
 
-#include <BRBufferAllocator.h>
+#include <BRMemoryMgr.h>
 
 namespace BR
 {
@@ -10,7 +10,7 @@ class ASBuilder
     ASBuilder();
     ~ASBuilder();
 
-    void create( BufferAllocator& mainAlloc );
+    void create( );
     void destroy();
 
     vk::AccelerationStructureKHR buildBlas( std::string name,
@@ -28,7 +28,7 @@ class ASBuilder
 
    private:
     vk::Device m_device;
-    BufferAllocator* m_alloc;
+    MemoryMgr& m_alloc;
     CommandPool m_pool;
     vk::Buffer m_tlasScratch;
     vk::Buffer m_instanceBuff;

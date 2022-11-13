@@ -16,14 +16,16 @@ Device::Device()
 
 //TODO surface should be it's own object
 void Device::create( std::string name,
-                     const std::vector<const char*>& deviceExtensions )
+                     const std::vector<const char*>& deviceExtensions,
+                    vk::Instance instance,
+                    vk::SurfaceKHR surface )
 {
     uint32_t deviceCount = 0;
 
     auto devices =
-        AppState::instance().getInstance().enumeratePhysicalDevices();
+        instance.enumeratePhysicalDevices();
 
-    vkEnumeratePhysicalDevices( AppState::instance().getInstance(),
+    vkEnumeratePhysicalDevices( instance,
                                 &deviceCount, nullptr );
 
     assert( !devices.empty() );
@@ -113,7 +115,7 @@ void Device::create( std::string name,
 
     // assuming the graphics queue also has presentation support
     bool presentSupport = m_physicalDevice.getSurfaceSupportKHR(
-        graphicsFamilyIndex, AppState::instance().getSurface() );
+        graphicsFamilyIndex, surface );
     assert( presentSupport );
 
     try
@@ -151,7 +153,7 @@ void Device::create( std::string name,
 
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, famCounter++,
-                                              AppState::instance().getSurface(),
+                                              surface,
                                               &presentSupport );
 
         printf( "\tPresentation Support: %d\n\n", presentSupport );

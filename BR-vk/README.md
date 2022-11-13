@@ -19,11 +19,16 @@
 9.  [08-2022] Added Dear ImGui, from the Nvidia RT tutorial
 10. [09-2022] Added ray tracing pipeline (BLAS, TLAS, SBT)
 11. [09-2022] Added kb+m transformations - camera and model manipulators
+12. [10-2022] Added depth buffering
+13. [10-2022] Accumulation buffer, glossy reflections, ambient occlusion
+
 
 # Current work
-1. Go into Raster and RT shaders. Implement some more interesting shading
-2. Add accumulation buffer from the 2019 work
-3. Some refactoring and class re-design might be needed
-
+1. Refactor the code, split everything into logical components. Need to have a solid foundation
+    Need to re-write several classes as builders - pipeline, framebuffer, renderpass, etc
+2. Add support for rendering more geometry, build up scenes, multiple index buffers, VBOs, TLAS/BLAS, etc
+3. Add lights, textures, different materials
+4. Experiment with deferred rendering, and more advanced RT
+5. At some point, I'll run out of memory handles - will have to write a memory allocator
 
 

@@ -200,6 +200,8 @@ void Pipeline::create( std::string name, RenderPass& renderpass,
 void Pipeline::createRT( std::string name,
                          vk::DescriptorSetLayout descriptorSetLayout )
 {
+    m_device = AppState::instance().getLogicalDevice();
+
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;

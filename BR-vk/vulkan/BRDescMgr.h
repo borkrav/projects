@@ -7,10 +7,9 @@ namespace BR
 {
 class DescMgr
 {
-   public:
-    DescMgr();
-    ~DescMgr();
+    friend class AppState;
 
+   public:
     struct Binding
     {
         int bind;
@@ -25,8 +24,6 @@ class DescMgr
         uint32_t count;
     };
 
-    void destroy();
-
     vk::DescriptorSetLayout createLayout( std::string name,
                                           const std::vector<Binding>& params );
 
@@ -38,8 +35,14 @@ class DescMgr
                                  vk::DescriptorPool pool );
 
    private:
+    DescMgr();
+    ~DescMgr();
+    DescMgr( const DescMgr& ) = delete;
+
     vk::Device m_device;
     std::vector<vk::DescriptorSetLayout> m_layouts;
     std::vector<vk::DescriptorPool> m_pools;
+
+    void destroy();
 };
 }  // namespace BR

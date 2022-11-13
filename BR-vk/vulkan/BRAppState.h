@@ -1,25 +1,46 @@
 #pragma once
 
 #include <BRDebug.h>
+#include <BRDescMgr.h>
 #include <BRDevice.h>
 #include <BRInstance.h>
+#include <BRMemoryMgr.h>
 #include <BRSurface.h>
 #include <BRSwapchain.h>
+#include <BRSyncMgr.h>
 
 #include <vulkan/vulkan_handles.hpp>
 
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
+
 namespace BR
 {
+/*
 
-//Singleton class defining the Vulkan application state, containing:
+Singleton class defining the Vulkan application state, containing:
 
-//1 VkInstance
-//1 VkPhysicalDevice/VkDevice
-//1 VkSurfaceKHR
-//1 VkSwapchainKHR
+1 VkInstance
+1 VkPhysicalDevice/VkDevice
+1 VkSurfaceKHR
+1 VkSwapchainKHR
 
 // This can be extended to support multiple devices, multiple Surfaces + Swapchains
 // For now, this is not supported, only supporting 1 GPU rendering to 1 window
+
+Class also contains
+
+DescMgr - Manages Description sets/layouts
+SyncMgr - Manages Sync objects
+MemoryMgr - Manages GPU memory
+
+Each of these classes keep track of created objects, and destroy them
+Only need one of each for this project
+
+*/
 
 class AppState
 {
@@ -38,7 +59,6 @@ class AppState
     void recreateSwapchain();
 
     vk::Instance getInstance();
-
     vk::PhysicalDevice getPhysicalDevice();
     vk::Device getLogicalDevice();
     vk::Queue getGraphicsQueue();
@@ -49,6 +69,16 @@ class AppState
     vk::Format getSwapchainFormat();
     vk::Extent2D& getSwapchainExtent();
     std::vector<vk::ImageView>& getImageViews();
+    BR::DescMgr& getDescMgr();
+    BR::SyncMgr& getSyncMgr();
+    BR::MemoryMgr& getMemoryMgr();
+    GLFWwindow* getWindow();
+
+    void takeScreenshot( CommandPool& pool, int frame );
+
+    uint32_t m_iWidth = 1920;
+    const uint32_t m_iHeight = 1080;
+    const int m_framesInFlight = 2;
 
     //RT Device Functions
     PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
@@ -85,12 +115,14 @@ class AppState
 
     GLFWwindow* m_window;
 
-    bool created;
-
+    //TODO: need to clean these classes up, move things to constructors
     BR::Instance m_instance;
     BR::Device m_device;
     BR::Surface m_surface;
     BR::Swapchain m_swapchain;
+    BR::DescMgr m_descMgr;
+    BR::SyncMgr m_syncMgr;
+    BR::MemoryMgr m_memoryMgr;
 
 #ifdef NDEBUG
 #else

@@ -1,5 +1,5 @@
 #include <BRAppState.h>
-#include <BRBufferAllocator.h>
+#include <BRMemoryMgr.h>
 #include <BRUtil.h>
 
 #include <cassert>
@@ -33,16 +33,16 @@ uint32_t findMemoryType( uint32_t typeFilter,
     return -1;
 }
 
-BufferAllocator::BufferAllocator() : m_device( nullptr )
+MemoryMgr::MemoryMgr() : m_device( nullptr )
 {
 }
 
-BufferAllocator::~BufferAllocator()
+MemoryMgr::~MemoryMgr()
 {
     assert( m_alloc.empty() );
 }
 
-vk::Buffer BufferAllocator::createDeviceBuffer( std::string name,
+vk::Buffer MemoryMgr::createDeviceBuffer( std::string name,
                                                 vk::DeviceSize size,
                                                 void* srcData, bool hostVisible,
                                                 vk::BufferUsageFlags type )
@@ -120,7 +120,7 @@ vk::Buffer BufferAllocator::createDeviceBuffer( std::string name,
     return resultBuffer;
 }
 
-std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
+std::pair<vk::Buffer, vk::DeviceMemory> MemoryMgr::createBuffer(
     vk::DeviceSize size, vk::BufferUsageFlags usage,
     vk::MemoryPropertyFlags properties )
 {
@@ -183,7 +183,7 @@ std::pair<vk::Buffer, vk::DeviceMemory> BufferAllocator::createBuffer(
     return std::make_pair( buffer, mem );
 }
 
-void BufferAllocator::copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
+void MemoryMgr::copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
                                   vk::DeviceSize size )
 {
     auto familyIndex = AppState::instance().getFamilyIndex();
@@ -209,7 +209,7 @@ void BufferAllocator::copyBuffer( vk::Buffer srcBuffer, vk::Buffer dstBuffer,
     m_copyPool.freeBuffer( copyBuffer );
 }
 
-void BufferAllocator::updateVisibleBuffer( vk::Buffer buff, vk::DeviceSize size,
+void MemoryMgr::updateVisibleBuffer( vk::Buffer buff, vk::DeviceSize size,
                                            void* data )
 {
     auto mem = getMemory( buff );
@@ -219,7 +219,7 @@ void BufferAllocator::updateVisibleBuffer( vk::Buffer buff, vk::DeviceSize size,
     m_device.unmapMemory( mem );
 }
 
-vk::DeviceMemory BufferAllocator::getMemory(
+vk::DeviceMemory MemoryMgr::getMemory(
     std::variant<vk::Buffer, vk::Image> buffer )
 {
     auto it = m_alloc.find( buffer );
@@ -229,7 +229,7 @@ vk::DeviceMemory BufferAllocator::getMemory(
     return it->second;
 }
 
-vk::Image BufferAllocator::createImage( std::string name, uint32_t width,
+vk::Image MemoryMgr::createImage( std::string name, uint32_t width,
                                         uint32_t height, vk::Format format,
                                         vk::ImageTiling tiling,
                                         vk::ImageUsageFlags usage,
@@ -295,7 +295,7 @@ vk::Image BufferAllocator::createImage( std::string name, uint32_t width,
     return image;
 }
 
-vk::ImageView BufferAllocator::createImageView(
+vk::ImageView MemoryMgr::createImageView(
     std::string name, vk::Image image, vk::Format format,
     vk::ImageAspectFlagBits aspectFlagBits )
 {
@@ -328,14 +328,14 @@ vk::ImageView BufferAllocator::createImageView(
     }
 }
 
-uint64_t BufferAllocator::getDeviceAddress( VkBuffer buffer )
+uint64_t MemoryMgr::getDeviceAddress( VkBuffer buffer )
 {
     auto it = m_addresses.find( buffer );
     assert( it != m_addresses.end() );
     return it->second;
 }
 
-uint64_t BufferAllocator::getBufferDeviceAddress( VkBuffer buffer )
+uint64_t MemoryMgr::getBufferDeviceAddress( VkBuffer buffer )
 {
     VkBufferDeviceAddressInfoKHR bufferDeviceAI{};
     bufferDeviceAI.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -344,7 +344,7 @@ uint64_t BufferAllocator::getBufferDeviceAddress( VkBuffer buffer )
                                                              &bufferDeviceAI );
 }
 
-void BufferAllocator::free( std::variant<vk::Buffer, vk::Image> buffer )
+void MemoryMgr::free( std::variant<vk::Buffer, vk::Image> buffer )
 {
     auto it = m_alloc.find( buffer );
     assert( it != m_alloc.end() );
@@ -380,7 +380,7 @@ void BufferAllocator::free( std::variant<vk::Buffer, vk::Image> buffer )
     }
 }
 
-void BufferAllocator::destroy()
+void MemoryMgr::destroy()
 {
     for ( auto alloc : m_alloc )
     {

@@ -4,15 +4,16 @@
 
 #include <BRASBuilder.h>
 #include <BRAppState.h>
-#include <BRBufferAllocator.h>
 #include <BRCameraManip.h>
 #include <BRCommandPool.h>
 #include <BRDescMgr.h>
 #include <BRDevice.h>
 #include <BRFramebuffer.h>
 #include <BRInstance.h>
+#include <BRMemoryMgr.h>
 #include <BRModelManip.h>
-#include <BRPipeline.h>
+#include <BRRaster.h>
+#include <BRRayTracer.h>
 #include <BRRenderPass.h>
 #include <BRSurface.h>
 #include <BRSwapchain.h>
@@ -35,21 +36,35 @@ namespace BR
 class BRRender
 {
    public:
+    BRRender();
     void run();
+
     bool m_framebufferResized = false;
+
+    struct UniformBufferObject
+    {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+        glm::vec3 cameraPos;
+        int iteration;
+        bool accumulate;
+        int mode;
+    };
 
    private:
     GLFWwindow* m_window;
 
-    RenderPass m_renderPass;
-    Pipeline m_pipeline;
+    Raster m_raster;
+    RayTracer m_raytracer;
 
-    Framebuffer m_framebuffer;
     CommandPool m_commandPool;
-    SyncMgr m_syncMgr;
-    BufferAllocator m_bufferAlloc;
-    DescMgr m_descMgr;
-    ASBuilder m_asBuilder;
+
+    DescMgr& m_descMgr;
+    SyncMgr& m_syncMgr;
+    MemoryMgr& m_bufferAlloc;
+
+    int m_framesInFlight;
 
     ModelManip m_modelManip;
     CameraManip m_cameraManip;
@@ -65,30 +80,14 @@ class BRRender
     vk::Buffer m_rtVertexBuffer;
     vk::Buffer m_indexBuffer;
 
-    vk::Buffer m_accBuffer;
-
-    vk::Image m_depthBuffer;
-    vk::ImageView m_depthBufferView;
-
-    vk::DescriptorSetLayout m_descriptorSetLayout;
     vk::DescriptorPool m_descriptorPool;
-    std::vector<vk::DescriptorSet> m_descriptorSets;
+
     std::vector<vk::Buffer> m_uniformBuffers;
 
     int m_currentFrame = 0;
 
     std::vector<Pipeline::Vertex> m_vertices;
     std::vector<uint32_t> m_indices;
-
-    //Ray-Tracing related things
-    vk::AccelerationStructureKHR m_blas;
-    vk::AccelerationStructureKHR m_tlas;
-    vk::DescriptorSetLayout m_rtDescriptorSetLayout;
-    std::vector<vk::DescriptorSet> m_rtDescriptorSets;
-
-    vk::Buffer m_raygenSBT;
-    vk::Buffer m_missSBT;
-    vk::Buffer m_hitSBT;
 
     bool m_rtMode = false;
     int m_transformMode = 0;
@@ -98,54 +97,19 @@ class BRRender
     bool m_rtAccumulate = true;
     int m_rtType = 0;
 
-    struct UniformBufferObject
-    {
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 proj;
-        glm::vec3 cameraPos;
-        int iteration;
-        bool accumulate;
-        int mode;
-    };
-
     void initWindow();
     void initVulkan();
-    void initRaster();
-    void initRT();
-
     void loadModel( std::string name );
-
     void recreateSwapchain();
-
-    void recordRasterCommandBuffer( vk::CommandBuffer commandBuffer,
-                                    uint32_t imageIndex );
-
-    void recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
-                                uint32_t imageIndex );
-
-    void setRTRenderTarget( uint32_t imageIndex );
 
     void mainLoop();
     void drawFrame();
     void cleanup();
 
-    void takeScreenshot();
-
     void initUI();
-
     void drawUI();
-    uint64_t getBufferDeviceAddress( VkBuffer buffer );
 
-    void createDescriptorSets();
     void updateUniformBuffer( uint32_t currentImage );
-    void createDepthBuffer();
-
-    void createAccumulationBuffer();
-
-    void createAS();
-    void createSBT();
-    void createRTDescriptorSets();
 
     void onMouseButton( int button, int action, int mods );
     void onMouseMove( int x, int y );

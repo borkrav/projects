@@ -13,9 +13,12 @@ class Device
 
    private:
     Device();
+    Device( const Device& ) = delete;
 
     void create( std::string name,
-                 const std::vector<const char*>& deviceExtensions );
+                 const std::vector<const char*>& deviceExtensions,
+                 vk::Instance instance,
+                 vk::SurfaceKHR surface);
 
     vk::PhysicalDevice m_physicalDevice;
     vk::UniqueDevice m_logicalDevice;
