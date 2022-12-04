@@ -1,6 +1,6 @@
 #pragma once
 
-#include <BRPipeline.h>
+#include <BRRTPipeline.h>
 #include <BRRaster.h>
 
 #include "BRASBuilder.h"
@@ -44,8 +44,6 @@ class RayTracer
 
     ASBuilder m_asBuilder;
 
-    RenderPass m_renderPass;
-
     vk::Buffer m_accBuffer;
 
     vk::AccelerationStructureKHR m_blas;
@@ -54,7 +52,7 @@ class RayTracer
     vk::DescriptorSetLayout m_rtDescriptorSetLayout;
     std::vector<vk::DescriptorSet> m_rtDescriptorSets;
 
-    Pipeline m_pipeline;
+    RTPipeline m_pipeline;
 
     vk::Device m_device;
 
@@ -63,5 +61,6 @@ class RayTracer
     vk::Buffer m_hitSBT;
 
     void createAccumulationBuffer();
+    void createPipeline();
 };
 }  // namespace BR

@@ -16,58 +16,23 @@ class Pipeline
     Pipeline();
     ~Pipeline();
 
-    void create( std::string name, RenderPass& renderpass,
-                 vk::DescriptorSetLayout layout );
-    void createRT( std::string name,
-                   vk::DescriptorSetLayout descriptorSetLayout );
     void destroy();
+
     vk::Pipeline get();
-    vk::Pipeline getRT();
     vk::PipelineLayout getLayout();
-    vk::PipelineLayout getRTLayout();
 
-    struct Vertex
-    {
-        glm::vec3 pos;
-        glm::vec3 norm;
+    void addShaderStage( const std::string& spv,
+                         vk::ShaderStageFlagBits stage );
 
-        // This defines how to read the data
-        static vk::VertexInputBindingDescription getBindingDescription()
-        {
-            vk::VertexInputBindingDescription bindingDescription = {};
-            bindingDescription.binding = 0;
-            bindingDescription.stride = sizeof( Vertex );
-            bindingDescription.inputRate = vk::VertexInputRate::eVertex;
+   protected:
+    vk::ShaderModule createShaderModule( vk::Device device,
+                                         const std::vector<char>& code );
 
-            return bindingDescription;
-        }
-
-        // This describes where the vertex is and where the color is
-        // type of color, type of vertex
-        // location matches the location inside the shader
-        static std::array<vk::VertexInputAttributeDescription, 2>
-        getAttributeDescriptions()
-        {
-            std::array<vk::VertexInputAttributeDescription, 2>
-                attributeDescriptions = {};
-            attributeDescriptions[0].binding = 0;
-            attributeDescriptions[0].location = 0;
-            attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
-            attributeDescriptions[0].offset = offsetof( Vertex, pos );
-            attributeDescriptions[1].binding = 0;
-            attributeDescriptions[1].location = 1;
-            attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
-            attributeDescriptions[1].offset = offsetof( Vertex, norm );
-
-            return attributeDescriptions;
-        }
-    };
-
-   private:
     vk::PipelineLayout m_pipelineLayout;
-    vk::Pipeline m_graphicsPipeline;
-    vk::PipelineLayout m_rtPipelineLayout;
-    vk::Pipeline m_rtPipeline;
+    vk::Pipeline m_pipeline;
     vk::Device m_device;
+
+    std::vector<vk::PipelineShaderStageCreateInfo> m_shaderStages;
+    std::vector<vk::ShaderModule> m_shaderModules;
 };
 }  // namespace BR

@@ -30,5 +30,5 @@
 3. Add lights, textures, different materials
 4. Experiment with deferred rendering, and more advanced RT
 5. At some point, I'll run out of memory handles - will have to write a memory allocator
-
+6. Check out VK_NV_memory_decompression/VK_NV_copy_memory_indirect (Similar to the new MS direct storage, since I have NVMe SSD)
 

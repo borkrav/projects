@@ -1,13 +1,10 @@
 #include <BRRender.h>
 #include <BRUtil.h>
+#include <lodepng.h>
 
 #include <algorithm>
 #include <cassert>
 #include <ranges>
-
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <lodepng.h>
-#include <tiny_obj_loader.h>
 
 #define GLM_FORCE_RADIANS
 #include <chrono>
@@ -133,84 +130,31 @@ void BRRender::onMouseMove( int x, int y )
     }
 }
 
-void BRRender::loadModel( std::string name )
+void BRRender::createUIRenderPass()
 {
-    tinyobj::ObjReader reader;  // Used to read an OBJ file
-    reader.ParseFromFile( "models/" + name );
+    auto format = AppState::instance().getSwapchainFormat();
 
-    assert( reader.Valid() );  // Make sure tinyobj was able to parse this file
-    const std::vector<tinyobj::real_t> objVertices =
-        reader.GetAttrib().GetVertices();
-    const std::vector<tinyobj::shape_t>& objShapes =
-        reader.GetShapes();  // All shapes in the file
+    m_renderPass.addAttachment(
+        format, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore,
+        vk::ImageLayout::eGeneral, vk::ImageLayout::ePresentSrcKHR,
+        vk::ImageLayout::eColorAttachmentOptimal );
 
-    std::map<std::string, int> indexMap;
-    int index = 0;
+    m_renderPass.addAttachment(
+        vk::Format::eD32Sfloat, vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal );
 
-    std::vector<glm::vec4> rawVerts;
+    m_renderPass.addSubpass( vk::PipelineBindPoint::eGraphics, 0, 1 );
 
-    //every combination of vertex/normal pairs must be uniquely defined
-    //data duplication cannot be avoided
-    for ( auto shape : objShapes )
-    {
-        for ( auto vert : shape.mesh.indices )
-        {
-            auto vertIndex = vert.vertex_index;
-            auto normIndex = vert.normal_index;
+    m_renderPass.addDependency(
+        VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eBottomOfPipe,
+        vk::PipelineStageFlagBits::eColorAttachmentOutput,
+        vk::AccessFlagBits::eMemoryRead,
+        vk::AccessFlagBits::eColorAttachmentRead |
+            vk::AccessFlagBits::eColorAttachmentWrite );
 
-            BR::Pipeline::Vertex vert{
-                { objVertices[vertIndex * 3], objVertices[vertIndex * 3 + 1],
-                  objVertices[vertIndex * 3 + 2] },
-                { objVertices[normIndex * 3], objVertices[normIndex * 3 + 1],
-                  objVertices[normIndex * 3 + 2] } };
-
-            glm::vec4 rawVert = { objVertices[vertIndex * 3],
-                                  objVertices[vertIndex * 3 + 1],
-                                  objVertices[vertIndex * 3 + 2], 1 };
-
-            //this might be slow
-            std::string vertString =
-                std::to_string( vert.pos.x ) + std::to_string( vert.pos.y ) +
-                std::to_string( vert.pos.z ) + std::to_string( vert.norm.x ) +
-                std::to_string( vert.norm.y ) + std::to_string( vert.norm.z );
-
-            auto it = indexMap.find( vertString );
-
-            if ( it == indexMap.end() )
-            {
-                m_vertices.push_back( vert );
-                rawVerts.push_back( rawVert );
-                m_indices.push_back( index );
-                indexMap[vertString] = index++;
-            }
-            else
-            {
-                m_indices.push_back( it->second );
-            }
-        }
-    }
-
-    auto bufferSize = m_vertices.size() * sizeof( m_vertices[0] );
-    m_vertexBuffer = m_bufferAlloc.createDeviceBuffer(
-        "Vertex", bufferSize, m_vertices.data(), false,
-        vk::BufferUsageFlagBits::eVertexBuffer );
-
-    bufferSize = rawVerts.size() * sizeof( rawVerts[0] );
-    m_rtVertexBuffer = m_bufferAlloc.createDeviceBuffer(
-        "RTVertex", bufferSize, rawVerts.data(), false,
-        vk::BufferUsageFlagBits::eStorageBuffer |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress |
-            vk::BufferUsageFlagBits::
-                eAccelerationStructureBuildInputReadOnlyKHR );
-
-    bufferSize = m_indices.size() * sizeof( m_indices[0] );
-    m_indexBuffer = m_bufferAlloc.createDeviceBuffer(
-        "Index", bufferSize, m_indices.data(), false,
-        vk::BufferUsageFlagBits::eIndexBuffer |
-            vk::BufferUsageFlagBits::eStorageBuffer |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress |
-            vk::BufferUsageFlagBits::
-                eAccelerationStructureBuildInputReadOnlyKHR );
+    m_renderPass.build( "UI Renderpass" );
 }
 
 void BRRender::initUI()
@@ -220,6 +164,8 @@ void BRRender::initUI()
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;
 
+    createUIRenderPass();
+
     ImGui_ImplVulkan_InitInfo info = {};
     info.Instance = AppState::instance().getInstance();
     info.PhysicalDevice = AppState::instance().getPhysicalDevice();
@@ -228,14 +174,14 @@ void BRRender::initUI()
     info.Queue = AppState::instance().getGraphicsQueue();
     info.PipelineCache = nullptr;
     info.DescriptorPool = m_descriptorPool;
-    info.Subpass = 1;
+    info.Subpass = 0;
     info.MinImageCount = 2;
     info.ImageCount = 3;
     info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;  // <--- need argument?
     info.CheckVkResultFn = checkSuccess;
     info.Allocator = nullptr;
 
-    ImGui_ImplVulkan_Init( &info, m_raster.getRenderPass() );
+    ImGui_ImplVulkan_Init( &info, m_renderPass.get() );
     ImGui_ImplGlfw_InitForVulkan( m_window, true );
 
     // Setup style
@@ -251,7 +197,7 @@ void BRRender::initVulkan()
 {
     m_device = AppState::instance().getLogicalDevice();
 
-    loadModel( "room.obj" );
+    m_scene.loadModel( "sphere.obj" );
 
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
@@ -289,10 +235,12 @@ void BRRender::initVulkan()
     }
 
     m_raytracer.init();
-    m_raytracer.createAS( m_indices, m_rtVertexBuffer, m_indexBuffer );
+    m_raytracer.createAS( m_scene.m_indices, m_scene.m_rtVertexBuffer,
+                          m_scene.m_indexBuffer );
     m_raytracer.createSBT();
     m_raytracer.createRTDescriptorSets( m_uniformBuffers, m_descriptorPool,
-                                        m_rtVertexBuffer, m_indexBuffer );
+                                        m_scene.m_rtVertexBuffer,
+                                        m_scene.m_indexBuffer );
 
     initUI();
 }
@@ -423,13 +371,26 @@ void BRRender::drawFrame()
     if ( m_rtMode )
         m_raytracer.setRTRenderTarget( imageIndex, m_currentFrame );
 
-    m_commandBuffers[m_currentFrame].reset();
+    auto commandBuffer = m_commandBuffers[m_currentFrame];
+
+    commandBuffer.reset();
+
+    try
+    {
+        commandBuffer.begin( vk::CommandBufferBeginInfo() );
+    }
+
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to begin recording command buffer!" );
+    }
 
     if ( !m_rtMode )
     {
         m_raster.recordDrawCommandBuffer(
             m_commandBuffers[m_currentFrame], imageIndex, m_currentFrame,
-            m_vertexBuffer, m_indexBuffer, m_indices.size() );
+            m_scene.m_vertexBuffer, m_scene.m_indexBuffer,
+            m_scene.m_indices.size() );
     }
 
     else
@@ -437,6 +398,49 @@ void BRRender::drawFrame()
         m_raytracer.recordRTCommandBuffer( m_commandBuffers[m_currentFrame],
                                            imageIndex, m_currentFrame,
                                            m_raster );
+    }
+
+    //The Raster creates the framebuffer object
+    //The Raster has one renderpass
+    //The UI has it's own renderpass
+    //The UI renderpass is compatable with  the Raster's framebuffer object, therefore
+    //We can use the same framebuffer object
+    //If a render pass is not compatable with a framebuffer (different attachments)
+    //We have to create more framebuffers
+
+    auto& framebuffer = m_raster.getFrameBuffer().get();
+    auto extent = AppState::instance().getSwapchainExtent();
+
+    auto renderPassInfo = vk::RenderPassBeginInfo();
+    renderPassInfo.renderPass = m_renderPass.get();
+    renderPassInfo.framebuffer = framebuffer[imageIndex];
+    renderPassInfo.renderArea.offset.x = 0;
+    renderPassInfo.renderArea.offset.y = 0;
+    renderPassInfo.renderArea.extent = extent;
+
+    std::array<vk::ClearValue, 2> clearValues{};
+    clearValues[0] = vk::ClearColorValue(
+        std::array<float, 4>( { { 0.2f, 0.2f, 0.2f, 0.2f } } ) );
+    clearValues[1] = vk::ClearDepthStencilValue( 1.0f, 0 );
+
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = clearValues.data();
+
+    commandBuffer.beginRenderPass( renderPassInfo,
+                                   vk::SubpassContents::eInline );
+
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), commandBuffer );
+
+    commandBuffer.endRenderPass();
+
+    try
+    {
+        commandBuffer.end();
+    }
+    catch ( vk::SystemError err )
+    {
+        throw std::runtime_error( "failed to record command buffer!" );
     }
 
     auto submitInfo = vk::SubmitInfo();
@@ -517,6 +521,7 @@ void BRRender::cleanup()
     m_commandPool.destroy();
     m_raster.destroy();
     m_raytracer.destroy();
+    m_renderPass.destroy();
 
     ImGui_ImplVulkan_Shutdown();
     ImGui::DestroyContext();

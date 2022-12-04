@@ -22,7 +22,6 @@ RayTracer::RayTracer()
 void RayTracer::init()
 {
     m_asBuilder.create();
-    m_renderPass.createRT( "Raytrace Renderpass" );
 
     createAccumulationBuffer();
 
@@ -42,7 +41,24 @@ void RayTracer::init()
             { 5, vk::DescriptorType::eStorageBuffer, 1,
               vk::ShaderStageFlagBits::eRaygenKHR } } );
 
-    m_pipeline.createRT( "RY Pipeline", m_rtDescriptorSetLayout );
+    createPipeline();
+}
+
+void RayTracer::createPipeline()
+{
+    m_pipeline.addShaderStage( "build/shaders/raygen.rgen.spv",
+                               vk::ShaderStageFlagBits::eRaygenKHR );
+    m_pipeline.addShaderStage( "build/shaders/miss.rmiss.spv",
+                               vk::ShaderStageFlagBits::eMissKHR );
+    m_pipeline.addShaderStage( "build/shaders/closesthit.rchit.spv",
+                               vk::ShaderStageFlagBits::eClosestHitKHR );
+
+    m_pipeline.addShaderGroup( vk::RayTracingShaderGroupTypeKHR::eGeneral, 0 );
+    m_pipeline.addShaderGroup( vk::RayTracingShaderGroupTypeKHR::eGeneral, 1 );
+    m_pipeline.addShaderGroup(
+        vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup, 2 );
+
+    m_pipeline.build( "RT Pipeline", m_rtDescriptorSetLayout );
 }
 
 void RayTracer::createAS( std::vector<uint32_t>& indices,
@@ -86,7 +102,7 @@ void RayTracer::createSBT()
 
     //These are the addresses for where the shaders are
     AppState::instance().vkGetRayTracingShaderGroupHandlesKHR(
-        m_device, m_pipeline.getRT(), 0, groupCount, sbtSize,
+        m_device, m_pipeline.get(), 0, groupCount, sbtSize,
         shaderHandleStorage.data() );
 
     const vk::BufferUsageFlags bufferUsageFlags =
@@ -233,18 +249,6 @@ void RayTracer::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
 {
     auto extent = AppState::instance().getSwapchainExtent();
 
-    auto beginInfo = vk::CommandBufferBeginInfo();
-
-    try
-    {
-        commandBuffer.begin( beginInfo );
-    }
-
-    catch ( vk::SystemError err )
-    {
-        throw std::runtime_error( "failed to begin recording command buffer!" );
-    }
-
     vk::Image srcImage = AppState::instance().getSwapchainImage( imageIndex );
 
     vk::ImageSubresourceRange range;
@@ -262,11 +266,11 @@ void RayTracer::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
                   vk::ImageLayout::eGeneral );
 
     commandBuffer.bindPipeline( vk::PipelineBindPoint::eRayTracingKHR,
-                                m_pipeline.getRT() );
+                                m_pipeline.get() );
 
     vkCmdBindDescriptorSets(
         commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-        m_pipeline.getRTLayout(), 0, 1,
+        m_pipeline.getLayout(), 0, 1,
         (VkDescriptorSet*)&m_rtDescriptorSets[currentFrame], 0, nullptr );
 
     const uint32_t handleSize =
@@ -309,44 +313,6 @@ void RayTracer::recordRTCommandBuffer( vk::CommandBuffer commandBuffer,
                   vk::AccessFlagBits::eShaderWrite,
                   vk::AccessFlagBits::eMemoryRead, vk::ImageLayout::eGeneral,
                   vk::ImageLayout::eGeneral );
-
-    auto framebuffer = raster.m_framebuffer.get();
-
-    auto renderPassInfo = vk::RenderPassBeginInfo();
-    renderPassInfo.renderPass = m_renderPass.getRT();
-    renderPassInfo.framebuffer = framebuffer[imageIndex];
-    renderPassInfo.renderArea.offset.x = 0;
-    renderPassInfo.renderArea.offset.y = 0;
-    renderPassInfo.renderArea.extent = extent;
-
-    std::array<vk::ClearValue, 2> clearValues{};
-    clearValues[0] = vk::ClearColorValue(
-        std::array<float, 4>( { { 0.2f, 0.2f, 0.2f, 0.2f } } ) );
-    clearValues[1] = vk::ClearDepthStencilValue( 1.0f, 0 );
-
-    renderPassInfo.clearValueCount = 2;
-    renderPassInfo.pClearValues = clearValues.data();
-
-    //Render pass, this just transitions the image, doesn't clear it
-    commandBuffer.beginRenderPass( renderPassInfo,
-                                   vk::SubpassContents::eInline );
-
-    //Draw the UI over the RT output
-    commandBuffer.nextSubpass( vk::SubpassContents::eInline );
-
-    ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), commandBuffer );
-
-    commandBuffer.endRenderPass();
-
-    try
-    {
-        commandBuffer.end();
-    }
-    catch ( vk::SystemError err )
-    {
-        throw std::runtime_error( "failed to record command buffer!" );
-    }
 }
 
 void RayTracer::resize()
@@ -388,6 +354,5 @@ void RayTracer::updateTLAS( glm::mat4 model )
 void RayTracer::destroy()
 {
     m_asBuilder.destroy();
-    m_renderPass.destroy();
     m_pipeline.destroy();
 }

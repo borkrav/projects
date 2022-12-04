@@ -15,6 +15,7 @@
 #include <BRRaster.h>
 #include <BRRayTracer.h>
 #include <BRRenderPass.h>
+#include <BRScene.h>
 #include <BRSurface.h>
 #include <BRSwapchain.h>
 #include <BRSyncMgr.h>
@@ -76,18 +77,15 @@ class BRRender
     std::vector<vk::Semaphore> m_renderFinishedSemaphores;
     std::vector<vk::Fence> m_inFlightFences;
 
-    vk::Buffer m_vertexBuffer;
-    vk::Buffer m_rtVertexBuffer;
-    vk::Buffer m_indexBuffer;
+    Scene m_scene;
+
+    RenderPass m_renderPass;
 
     vk::DescriptorPool m_descriptorPool;
 
     std::vector<vk::Buffer> m_uniformBuffers;
 
     int m_currentFrame = 0;
-
-    std::vector<Pipeline::Vertex> m_vertices;
-    std::vector<uint32_t> m_indices;
 
     bool m_rtMode = false;
     int m_transformMode = 0;
@@ -101,6 +99,7 @@ class BRRender
     void initVulkan();
     void loadModel( std::string name );
     void recreateSwapchain();
+    void createUIRenderPass();
 
     void mainLoop();
     void drawFrame();

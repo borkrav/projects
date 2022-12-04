@@ -1,7 +1,7 @@
 #pragma once
 
 #include <BRFramebuffer.h>
-#include <BRPipeline.h>
+#include <BRRasterPipeline.h>
 #include <BRRenderPass.h>
 
 #include "BRDescMgr.h"
@@ -28,9 +28,7 @@ class Raster
     void destroy();
     void resize();
 
-    vk::RenderPass getRenderPass();
-
-    Framebuffer m_framebuffer;
+    Framebuffer& getFrameBuffer();
 
    private:
     DescMgr& m_descMgr;
@@ -47,8 +45,12 @@ class Raster
     vk::ImageView m_depthBufferView;
 
     RenderPass m_renderPass;
-    Pipeline m_pipeline;
+    RasterPipeline m_pipeline;
+
+    Framebuffer m_framebuffer;
 
     void createDepthBuffer();
+    void createRenderPass();
+    void createPipeline();
 };
 }  // namespace BR

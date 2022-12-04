@@ -26,11 +26,67 @@ void Raster::init()
                             vk::ShaderStageFlagBits::eVertex } } );
 
     createDepthBuffer();
+    createRenderPass();
 
-    m_renderPass.create( "Raster Renderpass" );
     m_framebuffer.create( "Swapchain Frame buffer", m_renderPass,
                           m_depthBufferView );
-    m_pipeline.create( "Raster Pipeline", m_renderPass, m_descriptorSetLayout );
+
+    createPipeline();
+}
+
+void Raster::createPipeline()
+{
+    auto swapChainExtent = AppState::instance().getSwapchainExtent();
+
+    m_pipeline.addShaderStage( "build/shaders/shader.vert.spv",
+                               vk::ShaderStageFlagBits::eVertex );
+    m_pipeline.addShaderStage( "build/shaders/shader.frag.spv",
+                               vk::ShaderStageFlagBits::eFragment );
+
+    auto bindingDescription = Scene::Vertex::getBindingDescription();
+    auto attributeDescriptions = Scene::Vertex::getAttributeDescriptions();
+
+    m_pipeline.addVertexInputInfo( bindingDescription, attributeDescriptions );
+    m_pipeline.addInputAssembly( vk::PrimitiveTopology::eTriangleList,
+                                 VK_FALSE );
+    m_pipeline.addViewport( swapChainExtent );
+    m_pipeline.addRasterizer( vk::CullModeFlagBits::eBack,
+                              vk::FrontFace::eCounterClockwise );
+    m_pipeline.addDepthSencil( vk::CompareOp::eLess );
+    m_pipeline.addMultisampling( vk::SampleCountFlagBits::e1 );
+    m_pipeline.addColorBlend();
+    m_pipeline.addDynamicStates(
+        { vk::DynamicState::eScissor, vk::DynamicState::eViewport } );
+    m_pipeline.build( "Raster Pipeline", m_renderPass, m_descriptorSetLayout );
+}
+
+void Raster::createRenderPass()
+{
+    auto format = AppState::instance().getSwapchainFormat();
+
+    m_renderPass.addAttachment(
+        format, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
+        vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral,
+        vk::ImageLayout::eColorAttachmentOptimal );
+
+    m_renderPass.addAttachment(
+        vk::Format::eD32Sfloat, vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal );
+
+    m_renderPass.addSubpass( vk::PipelineBindPoint::eGraphics, 0, 1 );
+
+    m_renderPass.addDependency(
+        VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eBottomOfPipe,
+        vk::PipelineStageFlagBits::eColorAttachmentOutput |
+            vk::PipelineStageFlagBits::eEarlyFragmentTests,
+        vk::AccessFlagBits::eMemoryRead,
+        vk::AccessFlagBits::eColorAttachmentRead |
+            vk::AccessFlagBits::eColorAttachmentWrite |
+            vk::AccessFlagBits::eDepthStencilAttachmentWrite );
+
+    m_renderPass.build( "Raster Renderpass" );
 }
 
 void Raster::createDepthBuffer()
@@ -88,22 +144,10 @@ void Raster::recordDrawCommandBuffer( vk::CommandBuffer commandBuffer,
     * Do a render pass
     * Give it the framebuffer index -> the attachement we're drawing into   
     * Bind the graphics pipeline
-    * Draw call - 3 vertices
+    * Draw call
     */
 
     auto extent = AppState::instance().getSwapchainExtent();
-
-    auto beginInfo = vk::CommandBufferBeginInfo();
-
-    try
-    {
-        commandBuffer.begin( beginInfo );
-    }
-
-    catch ( vk::SystemError err )
-    {
-        throw std::runtime_error( "failed to begin recording command buffer!" );
-    }
 
     auto framebuffer = m_framebuffer.get();
 
@@ -149,21 +193,7 @@ void Raster::recordDrawCommandBuffer( vk::CommandBuffer commandBuffer,
 
     commandBuffer.drawIndexed( static_cast<uint32_t>( drawCount ), 1, 0, 0, 0 );
 
-    commandBuffer.nextSubpass( vk::SubpassContents::eInline );
-
-    ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), commandBuffer );
-
     commandBuffer.endRenderPass();
-
-    try
-    {
-        commandBuffer.end();
-    }
-    catch ( vk::SystemError err )
-    {
-        throw std::runtime_error( "failed to record command buffer!" );
-    }
 }
 
 void Raster::resize()
@@ -176,9 +206,9 @@ void Raster::resize()
                           m_depthBufferView );
 }
 
-vk::RenderPass Raster::getRenderPass()
+Framebuffer& Raster::getFrameBuffer()
 {
-    return m_renderPass.get();
+    return m_framebuffer;
 }
 
 void Raster::destroy()
