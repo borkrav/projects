@@ -1,5 +1,7 @@
 #include <BRASBuilder.h>
 #include <BRAppState.h>
+#include <random>
+#include <ranges>
 
 #include <cassert>
 
@@ -184,18 +186,37 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
 vk::AccelerationStructureKHR ASBuilder::buildTlas(
     std::string name, vk::AccelerationStructureKHR blas )
 {
-    VkTransformMatrixKHR transformMatrix = { 1.0f, 0.0f, 0.0f, 0.0f,
-                                             0.0f, 1.0f, 0.0f, 0.0f,
-                                             0.0f, 0.0f, 1.0f, 0.0f };
+    std::vector<vk::AccelerationStructureInstanceKHR> m_instances;
 
-    //the BLAS instance that we're putting into the TLAS
-    vk::AccelerationStructureInstanceKHR instance;
-    instance.transform = transformMatrix;
-    instance.instanceCustomIndex = 0;
-    instance.mask = 0xFF;
-    instance.instanceShaderBindingTableRecordOffset = 0;
-    instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    instance.accelerationStructureReference = getAddress( blas );
+    std::random_device rd;  
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(1, 100000);
+
+    for ( int i : std::views::iota( 0, 152 ) )
+    {
+        glm::mat4 transform( 1 );
+
+        float rand1 = (float)distrib( gen ) / 100000;
+        float rand2 = (float)distrib( gen ) / 100000;
+        float rand3 = (float)distrib( gen ) / 100000;
+
+        VkTransformMatrixKHR transformMatrix = {
+            rand1 + 0.5, 0.0f,        0.0f,        15 - ( rand1 * 30 ),
+            0.0f,        rand1 + 0.5, 0.0f,        15 - ( rand2 * 30 ),
+            0.0f,        0.0f,        rand1 + 0.5, 15 - ( rand3 * 30 ) };
+
+        //the BLAS instance that we're putting into the TLAS
+        vk::AccelerationStructureInstanceKHR instance;
+        instance.transform = transformMatrix;
+        instance.instanceCustomIndex = 0;
+        instance.mask = 0xFF;
+        instance.instanceShaderBindingTableRecordOffset = 0;
+        instance.flags =
+            VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        instance.accelerationStructureReference = getAddress( blas );
+
+        m_instances.push_back( instance );
+    }
 
     vk::BufferUsageFlags flags =
         vk::BufferUsageFlagBits::eShaderDeviceAddress |
@@ -203,7 +224,7 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
 
     m_instanceBuff = m_alloc.createDeviceBuffer(
         name + " instance buffer",
-        sizeof( vk::AccelerationStructureInstanceKHR ), &instance, true,
+        m_instances.size()*sizeof( vk::AccelerationStructureInstanceKHR ), m_instances.data(), true,
         flags );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
@@ -288,7 +309,7 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
     asInfo.scratchData.deviceAddress = tlasScratchAddress;
 
     vk::AccelerationStructureBuildRangeInfoKHR asRangeInfo;
-    asRangeInfo.primitiveCount = 1;
+    asRangeInfo.primitiveCount = m_instances.size();
     asRangeInfo.primitiveOffset = 0;
     asRangeInfo.firstVertex = 0;
     asRangeInfo.transformOffset = 0;

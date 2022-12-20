@@ -1,12 +1,14 @@
 #include "BRRaster.h"
 
 #include <ranges>
+#include <random>
 
 #include "BRAppState.h"
 #include "BRRender.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
+
 
 using namespace BR;
 
@@ -23,10 +25,15 @@ void Raster::init()
     m_descriptorSetLayout = m_descMgr.createLayout(
         "UBO layout", std::vector<BR::DescMgr::Binding>{
                           { 0, vk::DescriptorType::eUniformBuffer, 1,
-                            vk::ShaderStageFlagBits::eVertex } } );
+                            vk::ShaderStageFlagBits::eVertex },
+                          { 1, vk::DescriptorType::eStorageBuffer, 1,
+                            vk::ShaderStageFlagBits::eVertex },
+                          { 2, vk::DescriptorType::eStorageBuffer, 1,
+                            vk::ShaderStageFlagBits::eVertex }  } );
 
     createDepthBuffer();
     createRenderPass();
+    createInstances();
 
     m_framebuffer.create( "Swapchain Frame buffer", m_renderPass,
                           m_depthBufferView );
@@ -104,6 +111,39 @@ void Raster::createDepthBuffer()
         vk::ImageAspectFlagBits::eDepth );
 }
 
+void Raster::createInstances()
+{
+    std::vector<glm::mat4> positions;
+    std::vector<glm::vec4> colors;
+
+    std::random_device rd;  
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(1, 100000);
+
+
+    for ( int i : std::views::iota( 0, 2000 ) )
+    {
+        glm::mat4 transform(1);
+
+        float rand1 = (float)distrib( gen ) / 100000;
+        float rand2 = (float)distrib( gen ) / 100000;
+        float rand3 = (float)distrib( gen ) / 100000;
+
+        transform = glm::translate( transform, glm::vec3( 50-(rand1*100),  50-(rand2*100), 50-(rand3*100) ) );
+        transform = glm::scale( transform, glm::vec3( rand1+0.5, rand1+0.5, rand1+0.5 ) );
+
+        positions.push_back( transform );
+        colors.push_back( glm::vec4( rand1, rand2, rand3, 1.0 ) );
+    }
+
+    m_instancePositions = m_bufferAlloc.createDeviceBuffer(
+        "Instance Positions", positions.size() * sizeof( glm::mat4 ),
+        positions.data(), false, vk::BufferUsageFlagBits::eStorageBuffer );
+    m_instanceColors = m_bufferAlloc.createDeviceBuffer(
+        "Instance Colors", colors.size() * sizeof( glm::vec4 ),
+        colors.data(), false, vk::BufferUsageFlagBits::eStorageBuffer );
+}
+
 void Raster::createDescriptorSets( std::vector<vk::Buffer>& uniforms,
                                    vk::DescriptorPool pool )
 {
@@ -114,24 +154,57 @@ void Raster::createDescriptorSets( std::vector<vk::Buffer>& uniforms,
 
     for ( int i : std::views::iota( 0, m_framesInFlight ) )
     {
-        vk::DescriptorBufferInfo bufferInfo;
-        bufferInfo.buffer = uniforms[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof( BRRender::UniformBufferObject );
+        vk::DescriptorBufferInfo uboBufferInfo;
+        uboBufferInfo.buffer = uniforms[i];
+        uboBufferInfo.offset = 0;
+        uboBufferInfo.range = VK_WHOLE_SIZE;
 
-        vk::WriteDescriptorSet descriptorWrite;
-        descriptorWrite.dstSet = m_descriptorSets[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
-        descriptorWrite.descriptorCount = 1;
+        vk::WriteDescriptorSet uboWrite;
+        uboWrite.dstSet = m_descriptorSets[i];
+        uboWrite.dstBinding = 0;
+        uboWrite.dstArrayElement = 0;
+        uboWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
+        uboWrite.descriptorCount = 1;
+        uboWrite.pBufferInfo = &uboBufferInfo;
+        uboWrite.pImageInfo = nullptr;        // Optional
+        uboWrite.pTexelBufferView = nullptr;  // Optional
 
-        descriptorWrite.pBufferInfo = &bufferInfo;
-        descriptorWrite.pImageInfo = nullptr;        // Optional
-        descriptorWrite.pTexelBufferView = nullptr;  // Optional
+        vk::DescriptorBufferInfo instancePosBufferInfo;
+        instancePosBufferInfo.buffer = m_instancePositions;
+        instancePosBufferInfo.offset = 0;
+        instancePosBufferInfo.range = VK_WHOLE_SIZE;
 
-        vkUpdateDescriptorSets(
-            m_device, 1, (VkWriteDescriptorSet*)&descriptorWrite, 0, nullptr );
+        vk::WriteDescriptorSet instancePosWrite;
+        instancePosWrite.dstSet = m_descriptorSets[i];
+        instancePosWrite.dstBinding = 1;
+        instancePosWrite.dstArrayElement = 0;
+        instancePosWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+        instancePosWrite.descriptorCount = 1;
+        instancePosWrite.pBufferInfo = &instancePosBufferInfo;
+        instancePosWrite.pImageInfo = nullptr;        // Optional
+        instancePosWrite.pTexelBufferView = nullptr;  // Optional
+
+         vk::DescriptorBufferInfo instanceColBufferInfo;
+        instanceColBufferInfo.buffer = m_instanceColors;
+        instanceColBufferInfo.offset = 0;
+        instanceColBufferInfo.range = VK_WHOLE_SIZE;
+
+        vk::WriteDescriptorSet instanceColWrite;
+        instanceColWrite.dstSet = m_descriptorSets[i];
+        instanceColWrite.dstBinding = 2;
+        instanceColWrite.dstArrayElement = 0;
+        instanceColWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+        instanceColWrite.descriptorCount = 1;
+        instanceColWrite.pBufferInfo = &instanceColBufferInfo;
+        instanceColWrite.pImageInfo = nullptr;        // Optional
+        instanceColWrite.pTexelBufferView = nullptr;  // Optional
+
+        std::vector<vk::WriteDescriptorSet> writes = {
+            uboWrite, instancePosWrite, instanceColWrite };
+
+        vkUpdateDescriptorSets( m_device, writes.size(),
+                                (VkWriteDescriptorSet*)writes.data(), 0,
+                                nullptr );
     }
 }
 
@@ -160,7 +233,7 @@ void Raster::recordDrawCommandBuffer( vk::CommandBuffer commandBuffer,
 
     std::array<vk::ClearValue, 2> clearValues{};
     clearValues[0] = vk::ClearColorValue(
-        std::array<float, 4>( { { 0.2f, 0.2f, 0.2f, 0.2f } } ) );
+        std::array<float, 4>( { { 0.9f, 0.9f, 0.9f, 0.2f } } ) );
     clearValues[1] = vk::ClearDepthStencilValue( 1.0f, 0 );
 
     renderPassInfo.clearValueCount = 2;
@@ -191,7 +264,7 @@ void Raster::recordDrawCommandBuffer( vk::CommandBuffer commandBuffer,
         commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.getLayout(),
         0, 1, (VkDescriptorSet*)&m_descriptorSets[currentFrame], 0, nullptr );
 
-    commandBuffer.drawIndexed( static_cast<uint32_t>( drawCount ), 1, 0, 0, 0 );
+    commandBuffer.drawIndexed( static_cast<uint32_t>( drawCount ), 2000, 0, 0, 0 );
 
     commandBuffer.endRenderPass();
 }

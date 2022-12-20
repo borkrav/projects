@@ -275,7 +275,7 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
     ubo.view = m_cameraManip.getMat();
     ubo.proj =
         glm::perspective( glm::radians( 45.0f ),
-                          extent.width / (float)extent.height, 0.1f, 10.0f );
+                          extent.width / (float)extent.height, 0.1f, 1000.0f );
     ubo.proj[1][1] *= -1;
     ubo.cameraPos = m_cameraManip.getEye();
     ubo.iteration = ++m_iteration;
@@ -285,7 +285,7 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
     m_bufferAlloc.updateVisibleBuffer( m_uniformBuffers[currentImage],
                                        sizeof( ubo ), &ubo );
 
-    m_raytracer.updateTLAS( ubo.model );
+    // m_raytracer.updateTLAS( ubo.model );
 }
 
 void BRRender::drawUI()

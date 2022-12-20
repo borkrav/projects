@@ -1,5 +1,7 @@
 # Vulkan Renderer
 
+![alt text](https://github.com/borkrav/projects/blob/master/BR-vk/screenshots/Fri-Nov--4-15-51-37-2022.png?raw=true)
+
 # Goals
 - OBJ viewer, supporting Raster and RT
 - Learn the computer graphics pipeline and GPU

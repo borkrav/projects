@@ -214,7 +214,7 @@ void RayTracer::createRTDescriptorSets( std::vector<vk::Buffer>& uniforms,
             accelBufferWrite };
 
         vkUpdateDescriptorSets(
-            m_device, 5, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
+            m_device, writeDescriptorSets.size(), (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
             nullptr );
     }
 }

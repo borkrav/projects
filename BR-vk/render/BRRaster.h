@@ -41,6 +41,9 @@ class Raster
     vk::DescriptorSetLayout m_descriptorSetLayout;
     std::vector<vk::DescriptorSet> m_descriptorSets;
 
+    vk::Buffer m_instancePositions;
+    vk::Buffer m_instanceColors;
+
     vk::Image m_depthBuffer;
     vk::ImageView m_depthBufferView;
 
@@ -52,5 +55,6 @@ class Raster
     void createDepthBuffer();
     void createRenderPass();
     void createPipeline();
+    void createInstances();
 };
 }  // namespace BR
