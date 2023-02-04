@@ -1,9 +1,9 @@
 #include <BRASBuilder.h>
 #include <BRAppState.h>
-#include <random>
-#include <ranges>
 
 #include <cassert>
+#include <random>
+#include <ranges>
 
 using namespace BR;
 
@@ -184,26 +184,16 @@ vk::AccelerationStructureKHR ASBuilder::buildBlas( std::string name,
 
 //Build the TLAS, with one BLAS
 vk::AccelerationStructureKHR ASBuilder::buildTlas(
-    std::string name, vk::AccelerationStructureKHR blas )
+    std::string name, vk::AccelerationStructureKHR blas,
+    std::vector<glm::mat4>& instances )
 {
     std::vector<vk::AccelerationStructureInstanceKHR> m_instances;
 
-    std::random_device rd;  
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(1, 100000);
-
-    for ( int i : std::views::iota( 0, 152 ) )
+    for ( auto& mat : instances )
     {
-        glm::mat4 transform( 1 );
-
-        float rand1 = (float)distrib( gen ) / 100000;
-        float rand2 = (float)distrib( gen ) / 100000;
-        float rand3 = (float)distrib( gen ) / 100000;
-
         VkTransformMatrixKHR transformMatrix = {
-            rand1 + 0.5, 0.0f,        0.0f,        15 - ( rand1 * 30 ),
-            0.0f,        rand1 + 0.5, 0.0f,        15 - ( rand2 * 30 ),
-            0.0f,        0.0f,        rand1 + 0.5, 15 - ( rand3 * 30 ) };
+            mat[0][0], mat[1][0], mat[2][0], mat[3][0], mat[0][1], mat[1][1],
+            mat[2][1], mat[3][1], mat[0][2], mat[1][2], mat[2][2], mat[3][2] };
 
         //the BLAS instance that we're putting into the TLAS
         vk::AccelerationStructureInstanceKHR instance;
@@ -224,8 +214,8 @@ vk::AccelerationStructureKHR ASBuilder::buildTlas(
 
     m_instanceBuff = m_alloc.createDeviceBuffer(
         name + " instance buffer",
-        m_instances.size()*sizeof( vk::AccelerationStructureInstanceKHR ), m_instances.data(), true,
-        flags );
+        m_instances.size() * sizeof( vk::AccelerationStructureInstanceKHR ),
+        m_instances.data(), true, flags );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =
@@ -369,9 +359,9 @@ void ASBuilder::updateTlas( vk::AccelerationStructureKHR tlas,
                      VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
     instance.accelerationStructureReference = getAddress( blas );
 
-    m_alloc.updateVisibleBuffer(
-        m_instanceBuff, sizeof( vk::AccelerationStructureInstanceKHR ),
-        &instance );
+    m_alloc.updateVisibleBuffer( m_instanceBuff,
+                                 sizeof( vk::AccelerationStructureInstanceKHR ),
+                                 &instance );
 
     vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress;
     instanceDataDeviceAddress.deviceAddress =

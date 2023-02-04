@@ -17,7 +17,7 @@ class RayTracer
     void init();
 
     void createAS( std::vector<uint32_t>& indices, vk::Buffer vertexBuffer,
-                   vk::Buffer indexBuffer );
+                   vk::Buffer indexBuffer, std::vector<glm::mat4>& instances );
 
     void destroy();
 

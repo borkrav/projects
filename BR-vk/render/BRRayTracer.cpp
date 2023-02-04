@@ -62,7 +62,8 @@ void RayTracer::createPipeline()
 }
 
 void RayTracer::createAS( std::vector<uint32_t>& indices,
-                          vk::Buffer vertexBuffer, vk::Buffer indexBuffer )
+                          vk::Buffer vertexBuffer, vk::Buffer indexBuffer,
+                          std::vector<glm::mat4>& instances )
 {
     auto it = std::max_element( indices.begin(), indices.end() );
     int maxVertex = ( *it ) + 1;
@@ -70,7 +71,7 @@ void RayTracer::createAS( std::vector<uint32_t>& indices,
     m_blas = m_asBuilder.buildBlas( "BLAS", vertexBuffer, indexBuffer,
                                     maxVertex, indices.size() );
 
-    m_tlas = m_asBuilder.buildTlas( "TLAS", m_blas );
+    m_tlas = m_asBuilder.buildTlas( "TLAS", m_blas, instances );
 }
 
 void RayTracer::createAccumulationBuffer()
@@ -214,8 +215,8 @@ void RayTracer::createRTDescriptorSets( std::vector<vk::Buffer>& uniforms,
             accelBufferWrite };
 
         vkUpdateDescriptorSets(
-            m_device, writeDescriptorSets.size(), (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
-            nullptr );
+            m_device, writeDescriptorSets.size(),
+            (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0, nullptr );
     }
 }
 

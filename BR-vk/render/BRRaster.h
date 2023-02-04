@@ -6,6 +6,7 @@
 
 #include "BRDescMgr.h"
 #include "BRMemoryMgr.h"
+#include "BRScene.h"
 
 namespace BR
 {
@@ -18,12 +19,13 @@ class Raster
     void init();
 
     void createDescriptorSets( std::vector<vk::Buffer>& uniforms,
-                               vk::DescriptorPool pool );
+                               vk::DescriptorPool pool, Scene& scene );
 
     void recordDrawCommandBuffer( vk::CommandBuffer commandBuffer,
                                   uint32_t imageIndex, int currentFrame,
                                   vk::Buffer vertexBuffer,
-                                  vk::Buffer indexBuffer, int drawCount );
+                                  vk::Buffer indexBuffer, int drawCount,
+                                  int instances );
 
     void destroy();
     void resize();
@@ -41,9 +43,6 @@ class Raster
     vk::DescriptorSetLayout m_descriptorSetLayout;
     std::vector<vk::DescriptorSet> m_descriptorSets;
 
-    vk::Buffer m_instancePositions;
-    vk::Buffer m_instanceColors;
-
     vk::Image m_depthBuffer;
     vk::ImageView m_depthBufferView;
 
@@ -55,6 +54,5 @@ class Raster
     void createDepthBuffer();
     void createRenderPass();
     void createPipeline();
-    void createInstances();
 };
 }  // namespace BR

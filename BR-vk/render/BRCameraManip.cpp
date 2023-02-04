@@ -44,12 +44,6 @@ void CameraManip::orbit( int x, int y )
     float deltaY = sin( glm::radians( m_angleY ) ) * m_distance;
     float deltaZ = cos( glm::radians( m_angleY ) ) * m_distance;
 
-    if ( ( static_cast<int>( m_angleY ) % 360 > 90 ) &&
-         ( static_cast<int>( m_angleY ) % 360 < 270 ) )
-        m_up.y = -1;
-    else
-        m_up.y = 1;
-
     m_eye = glm::vec3( m_eye.x, deltaY, deltaZ );
 
     //left/right moves around the circle, on the x/z plane, relative to the y position
@@ -59,13 +53,6 @@ void CameraManip::orbit( int x, int y )
     float deltaX = sin( glm::radians( m_angleX ) ) * abs( deltaZ );
 
     deltaZ = cos( glm::radians( m_angleX ) ) * abs( deltaZ );
-
-    if ( ( static_cast<int>( m_angleX ) % 360 > 90 ) &&
-         ( static_cast<int>( m_angleX ) % 360 < 270 ) )
-    {
-        deltaZ = -deltaZ;
-        deltaX = -deltaX;
-    }
 
     m_eye = glm::vec3( deltaX, m_eye.y, deltaZ );
 

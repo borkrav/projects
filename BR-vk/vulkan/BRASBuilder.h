@@ -10,7 +10,7 @@ class ASBuilder
     ASBuilder();
     ~ASBuilder();
 
-    void create( );
+    void create();
     void destroy();
 
     vk::AccelerationStructureKHR buildBlas( std::string name,
@@ -19,7 +19,8 @@ class ASBuilder
                                             int maxVertex, int numIndex );
 
     vk::AccelerationStructureKHR buildTlas( std::string name,
-                                            vk::AccelerationStructureKHR blas );
+                                            vk::AccelerationStructureKHR blas,
+                                            std::vector<glm::mat4>& instances );
 
     void updateTlas( vk::AccelerationStructureKHR tlas,
                      vk::AccelerationStructureKHR blas, glm::mat4 mat );

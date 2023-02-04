@@ -30,11 +30,13 @@ void main() {
     // the position of the light, in view space
     vec4 light_pos_view = ubo.view * vec4( lightPos, 1 ); 
 
+    mat4 instanceMat = instancePos.pos[gl_InstanceIndex]; 
+
     // the vector from light to surface, in view space
-    vec4 light_vec_view = light_pos_view - ( ubo.view * instancePos.pos[gl_InstanceIndex] * vec4( inPosition, 1.0 ) );
+    vec4 light_vec_view = light_pos_view - ( ubo.view * instanceMat * vec4( inPosition, 1.0 ) );
 
     // the surface normal, in view space
-    vec4 normal_view = ubo.view * instancePos.pos[gl_InstanceIndex] * vec4( inNormal, 0 );
+    vec4 normal_view = ubo.view * instanceMat * vec4( inNormal, 0 );
 
     // normalized light vector
     vec4 light_vec_view_n = normalize( light_vec_view );
@@ -48,7 +50,7 @@ void main() {
     vec4 eye_pos_view = ubo.view * vec4( ubo.cameraPos, 1 );
 
     // vector from camera to surface, in view space
-    vec4 eye_vec_view = eye_pos_view - ( ubo.view * instancePos.pos[gl_InstanceIndex] * vec4( inPosition, 1.0 ) ) ;
+    vec4 eye_vec_view = eye_pos_view - ( ubo.view * instanceMat * vec4( inPosition, 1.0 ) ) ;
 
     // normalized eye vector
     vec4 eye_vec_view_n = normalize( eye_vec_view );
@@ -59,6 +61,6 @@ void main() {
     // dot product between the eye vector and the reflected light vector
     float cosAlpha = clamp( dot( eye_vec_view_n, refl ), 0, 1 );
 
-    gl_Position = ubo.proj * ubo.view * instancePos.pos[gl_InstanceIndex] * vec4( inPosition, 1.0 );
+    gl_Position = ubo.proj * ubo.view * instanceMat * vec4( inPosition, 1.0 );
     outColor = ambient*objColor + objColor * cosTheta + objColor * pow( cosAlpha, 5 );
 }

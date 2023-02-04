@@ -94,6 +94,7 @@ class BRRender
     int m_iteration = 0;
     bool m_rtAccumulate = true;
     int m_rtType = 0;
+    int m_instances = 100;
 
     void initWindow();
     void initVulkan();

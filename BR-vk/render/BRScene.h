@@ -59,6 +59,17 @@ class Scene
     vk::Buffer m_rtVertexBuffer;
     vk::Buffer m_indexBuffer;
 
+    std::vector<glm::mat4> m_positions;
+    std::vector<glm::vec4> m_colors;
+    vk::Buffer m_instancePositions;
+    vk::Buffer m_instanceColors;
+
+    void createInstances( int num );
+    void generateInstances( int num );
+    void updateInstances( int num );
+
+    int m_instances;
+
     std::vector<Vertex> m_vertices;
     std::vector<uint32_t> m_indices;
 };

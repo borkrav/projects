@@ -23,14 +23,13 @@
 11. [09-2022] Added kb+m transformations - camera and model manipulators
 12. [10-2022] Added depth buffering
 13. [10-2022] Accumulation buffer, glossy reflections, ambient occlusion
-
+14. [12-2022] Refactored the code, broke up dependencies between raster and ray trace, re-wrote classes as builders
+15. [02-2023] Added instanced drawing, for making simple scenes with multiple objects
 
 # Current work
-1. Refactor the code, split everything into logical components. Need to have a solid foundation
-    Need to re-write several classes as builders - pipeline, framebuffer, renderpass, etc
-2. Add support for rendering more geometry, build up scenes, multiple index buffers, VBOs, TLAS/BLAS, etc
-3. Add lights, textures, different materials
-4. Experiment with deferred rendering, and more advanced RT
-5. At some point, I'll run out of memory handles - will have to write a memory allocator
-6. Check out VK_NV_memory_decompression/VK_NV_copy_memory_indirect (Similar to the new MS direct storage, since I have NVMe SSD)
+1. Add support for rendering more geometry, build up scenes, multiple index buffers, VBOs, TLAS/BLAS, etc
+2. Add lights, textures, different materials
+3. Experiment with deferred rendering, and more advanced RT
+4. At some point, I'll run out of memory handles - will have to write a memory allocator
+5. Check out VK_NV_memory_decompression/VK_NV_copy_memory_indirect (Similar to the new MS direct storage, since I have NVMe SSD)
 

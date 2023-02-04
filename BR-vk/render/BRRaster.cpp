@@ -1,14 +1,12 @@
 #include "BRRaster.h"
 
 #include <ranges>
-#include <random>
 
 #include "BRAppState.h"
 #include "BRRender.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-
 
 using namespace BR;
 
@@ -29,11 +27,9 @@ void Raster::init()
                           { 1, vk::DescriptorType::eStorageBuffer, 1,
                             vk::ShaderStageFlagBits::eVertex },
                           { 2, vk::DescriptorType::eStorageBuffer, 1,
-                            vk::ShaderStageFlagBits::eVertex }  } );
-
+                            vk::ShaderStageFlagBits::eVertex } } );
     createDepthBuffer();
     createRenderPass();
-    createInstances();
 
     m_framebuffer.create( "Swapchain Frame buffer", m_renderPass,
                           m_depthBufferView );
@@ -111,41 +107,8 @@ void Raster::createDepthBuffer()
         vk::ImageAspectFlagBits::eDepth );
 }
 
-void Raster::createInstances()
-{
-    std::vector<glm::mat4> positions;
-    std::vector<glm::vec4> colors;
-
-    std::random_device rd;  
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(1, 100000);
-
-
-    for ( int i : std::views::iota( 0, 2000 ) )
-    {
-        glm::mat4 transform(1);
-
-        float rand1 = (float)distrib( gen ) / 100000;
-        float rand2 = (float)distrib( gen ) / 100000;
-        float rand3 = (float)distrib( gen ) / 100000;
-
-        transform = glm::translate( transform, glm::vec3( 50-(rand1*100),  50-(rand2*100), 50-(rand3*100) ) );
-        transform = glm::scale( transform, glm::vec3( rand1+0.5, rand1+0.5, rand1+0.5 ) );
-
-        positions.push_back( transform );
-        colors.push_back( glm::vec4( rand1, rand2, rand3, 1.0 ) );
-    }
-
-    m_instancePositions = m_bufferAlloc.createDeviceBuffer(
-        "Instance Positions", positions.size() * sizeof( glm::mat4 ),
-        positions.data(), false, vk::BufferUsageFlagBits::eStorageBuffer );
-    m_instanceColors = m_bufferAlloc.createDeviceBuffer(
-        "Instance Colors", colors.size() * sizeof( glm::vec4 ),
-        colors.data(), false, vk::BufferUsageFlagBits::eStorageBuffer );
-}
-
 void Raster::createDescriptorSets( std::vector<vk::Buffer>& uniforms,
-                                   vk::DescriptorPool pool )
+                                   vk::DescriptorPool pool, Scene& scene )
 {
     m_descriptorSets.push_back( m_descMgr.createSet(
         "Frame 1 Desc set", m_descriptorSetLayout, pool ) );
@@ -170,7 +133,7 @@ void Raster::createDescriptorSets( std::vector<vk::Buffer>& uniforms,
         uboWrite.pTexelBufferView = nullptr;  // Optional
 
         vk::DescriptorBufferInfo instancePosBufferInfo;
-        instancePosBufferInfo.buffer = m_instancePositions;
+        instancePosBufferInfo.buffer = scene.m_instancePositions;
         instancePosBufferInfo.offset = 0;
         instancePosBufferInfo.range = VK_WHOLE_SIZE;
 
@@ -184,8 +147,8 @@ void Raster::createDescriptorSets( std::vector<vk::Buffer>& uniforms,
         instancePosWrite.pImageInfo = nullptr;        // Optional
         instancePosWrite.pTexelBufferView = nullptr;  // Optional
 
-         vk::DescriptorBufferInfo instanceColBufferInfo;
-        instanceColBufferInfo.buffer = m_instanceColors;
+        vk::DescriptorBufferInfo instanceColBufferInfo;
+        instanceColBufferInfo.buffer = scene.m_instanceColors;
         instanceColBufferInfo.offset = 0;
         instanceColBufferInfo.range = VK_WHOLE_SIZE;
 
@@ -211,7 +174,8 @@ void Raster::createDescriptorSets( std::vector<vk::Buffer>& uniforms,
 void Raster::recordDrawCommandBuffer( vk::CommandBuffer commandBuffer,
                                       uint32_t imageIndex, int currentFrame,
                                       vk::Buffer vertexBuffer,
-                                      vk::Buffer indexBuffer, int drawCount )
+                                      vk::Buffer indexBuffer, int drawCount,
+                                      int instances )
 {
     /*
     * Do a render pass
@@ -264,7 +228,8 @@ void Raster::recordDrawCommandBuffer( vk::CommandBuffer commandBuffer,
         commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline.getLayout(),
         0, 1, (VkDescriptorSet*)&m_descriptorSets[currentFrame], 0, nullptr );
 
-    commandBuffer.drawIndexed( static_cast<uint32_t>( drawCount ), 2000, 0, 0, 0 );
+    commandBuffer.drawIndexed( static_cast<uint32_t>( drawCount ), instances, 0,
+                               0, 0 );
 
     commandBuffer.endRenderPass();
 }

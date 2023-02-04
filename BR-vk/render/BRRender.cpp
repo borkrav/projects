@@ -198,6 +198,7 @@ void BRRender::initVulkan()
     m_device = AppState::instance().getLogicalDevice();
 
     m_scene.loadModel( "sphere.obj" );
+    m_scene.createInstances( 100 );
 
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
@@ -217,7 +218,8 @@ void BRRender::initVulkan()
     }
 
     m_raster.init();
-    m_raster.createDescriptorSets( m_uniformBuffers, m_descriptorPool );
+    m_raster.createDescriptorSets( m_uniformBuffers, m_descriptorPool,
+                                   m_scene );
 
     m_commandPool.create( "Drawing pool",
                           vk::CommandPoolCreateFlagBits::eResetCommandBuffer );
@@ -236,7 +238,7 @@ void BRRender::initVulkan()
 
     m_raytracer.init();
     m_raytracer.createAS( m_scene.m_indices, m_scene.m_rtVertexBuffer,
-                          m_scene.m_indexBuffer );
+                          m_scene.m_indexBuffer, m_scene.m_positions );
     m_raytracer.createSBT();
     m_raytracer.createRTDescriptorSets( m_uniformBuffers, m_descriptorPool,
                                         m_scene.m_rtVertexBuffer,
@@ -300,6 +302,7 @@ void BRRender::drawUI()
                  1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
     ImGui::Checkbox( "Ray Tracing", &m_rtMode );
     ImGui::Checkbox( "Accumulation", &m_rtAccumulate );
+    ImGui::SliderInt( "Instances", &m_instances, 1, 100 );
 
     const char* items[] = { "Rotate", "Translate", "Scale" };
     ImGui::Combo( "Model Manip", &m_transformMode, items,
@@ -387,10 +390,11 @@ void BRRender::drawFrame()
 
     if ( !m_rtMode )
     {
+        m_scene.updateInstances( m_instances );
         m_raster.recordDrawCommandBuffer(
             m_commandBuffers[m_currentFrame], imageIndex, m_currentFrame,
             m_scene.m_vertexBuffer, m_scene.m_indexBuffer,
-            m_scene.m_indices.size() );
+            m_scene.m_indices.size(), m_scene.m_instances );
     }
 
     else
