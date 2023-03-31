@@ -104,7 +104,7 @@ void main()
 
   if(gl_HitTEXT > 1e-15)
   {
-    rayResult.hitValue = vec3(0.5);
+    rayResult.hitValue = vec3(0.9);
     rayResult.origin = worldSpaceIntersection;
     rayResult.direction = target - worldSpaceIntersection;
     rayResult.hit = true;
@@ -113,7 +113,7 @@ void main()
 
   else 
   {
-		rayResult.hitValue = vec3(0.5);
+		rayResult.hitValue = vec3(0.9);
 		rayResult.hit = false;
 	}
 

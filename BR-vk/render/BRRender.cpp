@@ -197,8 +197,48 @@ void BRRender::initVulkan()
 {
     m_device = AppState::instance().getLogicalDevice();
 
-    m_scene.loadModel( "sphere.obj" );
+    // No normals
+    // m_scene.loadModel( "CasualEffects/bedroom/iscv2.obj" ); 
+    // m_scene.loadModel( "CasualEffects/cloud/cumulus00.obj" );
+    // m_scene.loadModel( "CasualEffects/geodesic/geodesic_classI_20.obj" );
+    // m_scene.loadModel( "CasualEffects/lpshead/head.obj" );
+    // m_scene.loadModel( "CasualEffects/sibenik/sibenik.obj" );
+    // m_scene.loadModel( "CasualEffects/sponza2/sponza.obj" );
+    // m_scene.loadModel( "CasualEffects/teapot/teapot.obj" );
 
+    // Works
+    // m_scene.loadModel( "CasualEffects/bmw/bmw.obj" );
+    // m_scene.loadModel( "CasualEffects/breakfast_room/breakfast_room.obj" );
+    // m_scene.loadModel( "CasualEffects/buddha/buddha.obj" );
+    // m_scene.loadModel( "CasualEffects/bunny/bunny.obj" );
+    // m_scene.loadModel( "CasualEffects/chestnut/AL05a.obj" );
+    // m_scene.loadModel( "CasualEffects/conference/conference.obj" );
+    m_scene.loadModel( "CasualEffects/CornellBox/CornellBox-Water.obj" );
+    // m_scene.loadModel( "CasualEffects/Cube/Cube.obj" );
+    // m_scene.loadModel( "CasualEffects/dragon/dragon.obj" );
+    // m_scene.loadModel( "CasualEffects/erato/erato.obj" );
+    // m_scene.loadModel( "CasualEffects/Exterior/exterior.obj" );
+    // m_scene.loadModel( "CasualEffects/fireplace_room/fireplace_room.obj" );
+    // m_scene.loadModel( "CasualEffects/gallery/gallery.obj" );
+    // m_scene.loadModel( "CasualEffects/hairball/hairball.obj" );
+    // m_scene.loadModel( "CasualEffects/holodeck/holodeck.obj" );
+    // m_scene.loadModel( "CasualEffects/living_room/living_room.obj" );
+    // m_scene.loadModel( "CasualEffects/lost-empire/lost_empire.obj" );
+    // m_scene.loadModel( "CasualEffects/mitsuba/mitsuba.obj" );
+    // m_scene.loadModel( "CasualEffects/mori_knob/testObj.obj" );
+    // m_scene.loadModel( "CasualEffects/pine/scrubPine.obj" );
+    // m_scene.loadModel( "CasualEffects/powerplant/powerplant.obj" );
+    // m_scene.loadModel( "CasualEffects/roadBike/roadBike.obj" );
+    // m_scene.loadModel( "CasualEffects/rungholt/house.obj" );
+    // m_scene.loadModel( "CasualEffects/rungholt/rungholt.obj" );
+    // m_scene.loadModel( "CasualEffects/salle_de_bain/salle_de_bain.obj" );
+    // m_scene.loadModel( "CasualEffects/San_Miguel/san-miguel.obj" );
+    // m_scene.loadModel( "CasualEffects/sportsCar/sportsCar.obj" );
+    // m_scene.loadModel( "CasualEffects/sphere/sphere-cubecoords.obj" );
+    // m_scene.loadModel( "CasualEffects/sponza/sponza.obj" );
+    // m_scene.loadModel( "CasualEffects/vokselia_spawn/vokselia_spawn.obj" );
+    // m_scene.loadModel( "CasualEffects/white_oak/white_oak.obj" );
+     
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
         "Descriptor pool", 1000,

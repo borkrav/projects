@@ -17,6 +17,8 @@ void Scene::loadModel( std::string name )
     assert( reader.Valid() );  // Make sure tinyobj was able to parse this file
     const std::vector<tinyobj::real_t> objVertices =
         reader.GetAttrib().GetVertices();
+    const std::vector<tinyobj::real_t> objNormals =
+        reader.GetAttrib().normals;
     const std::vector<tinyobj::shape_t>& objShapes =
         reader.GetShapes();  // All shapes in the file
 
@@ -37,8 +39,8 @@ void Scene::loadModel( std::string name )
             Vertex vert{
                 { objVertices[vertIndex * 3], objVertices[vertIndex * 3 + 1],
                   objVertices[vertIndex * 3 + 2] },
-                { objVertices[normIndex * 3], objVertices[normIndex * 3 + 1],
-                  objVertices[normIndex * 3 + 2] } };
+                { objNormals[normIndex * 3], objNormals[normIndex * 3 + 1],
+                  objNormals[normIndex * 3 + 2] } };
 
             glm::vec4 rawVert = { objVertices[vertIndex * 3],
                                   objVertices[vertIndex * 3 + 1],
