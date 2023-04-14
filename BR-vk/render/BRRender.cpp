@@ -213,11 +213,14 @@ void BRRender::initVulkan()
     // m_scene.loadModel( "CasualEffects/bunny/bunny.obj" );
     // m_scene.loadModel( "CasualEffects/chestnut/AL05a.obj" );
     // m_scene.loadModel( "CasualEffects/conference/conference.obj" );
-    m_scene.loadModel( "CasualEffects/CornellBox/CornellBox-Water.obj" );
+    
+    //m_scene.loadModel( "CasualEffects/CornellBox/CornellBox-Water.obj" );
+    
     // m_scene.loadModel( "CasualEffects/Cube/Cube.obj" );
     // m_scene.loadModel( "CasualEffects/dragon/dragon.obj" );
     // m_scene.loadModel( "CasualEffects/erato/erato.obj" );
-    // m_scene.loadModel( "CasualEffects/Exterior/exterior.obj" );
+     m_scene.loadModel( "CasualEffects/bistro/Exterior/exterior.obj" );
+    // m_scene.loadModel( "CasualEffects/bistro/Interior/interior.obj" );
     // m_scene.loadModel( "CasualEffects/fireplace_room/fireplace_room.obj" );
     // m_scene.loadModel( "CasualEffects/gallery/gallery.obj" );
     // m_scene.loadModel( "CasualEffects/hairball/hairball.obj" );
@@ -238,6 +241,8 @@ void BRRender::initVulkan()
     // m_scene.loadModel( "CasualEffects/sponza/sponza.obj" );
     // m_scene.loadModel( "CasualEffects/vokselia_spawn/vokselia_spawn.obj" );
     // m_scene.loadModel( "CasualEffects/white_oak/white_oak.obj" );
+    
+    // m_scene.loadModel( "Bugatti_type_35b.obj" );
      
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(

@@ -43,8 +43,8 @@ void Raster::createPipeline()
     m_pipeline.addShaderStage( "build/shaders/shader.frag.spv",
                                vk::ShaderStageFlagBits::eFragment );
 
-    auto bindingDescription = Scene::Vertex::getBindingDescription();
-    auto attributeDescriptions = Scene::Vertex::getAttributeDescriptions();
+    auto bindingDescription = Scene::PipelineVertex::getBindingDescription();
+    auto attributeDescriptions = Scene::PipelineVertex::getAttributeDescriptions();
 
     m_pipeline.addVertexInputInfo( bindingDescription, attributeDescriptions );
     m_pipeline.addInputAssembly( vk::PrimitiveTopology::eTriangleList,
