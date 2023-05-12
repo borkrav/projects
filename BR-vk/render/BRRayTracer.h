@@ -25,7 +25,8 @@ class RayTracer
     void createRTDescriptorSets( std::vector<vk::Buffer>& uniforms,
                                  vk::DescriptorPool pool,
                                  vk::Buffer vertexBuffer,
-                                 vk::Buffer indexBuffer );
+                                 vk::Buffer indexBuffer, 
+                                 vk::Buffer colorBuffer );
 
     void setRTRenderTarget( uint32_t imageIndex, int currentFrame );
 

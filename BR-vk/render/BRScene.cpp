@@ -85,9 +85,10 @@ void Scene::loadModel( std::string name )
     }
     
 
-    // prepare vertex buffers
+    // prepare vertex buffersM
 
     std::vector<glm::vec4> rtVertices;
+    std::vector<glm::vec4> rtColors;
     int index = 0;
 
     for ( auto& shape : m_shapes )
@@ -96,18 +97,27 @@ void Scene::loadModel( std::string name )
         {
             for ( int i = 0; i < 3; ++i )
             {
+                Material mat( 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8 );
+
+                if ( !m_materials.empty() )
+                    mat = m_materials[triangle.mat];
+
                 PipelineVertex vert{
                     { triangle.verts[i].v.x, triangle.verts[i].v.y,
                       triangle.verts[i].v.z },
                     { triangle.verts[i].n.x, triangle.verts[i].n.y,
-                      triangle.verts[i].n.z } };
+                      triangle.verts[i].n.z },
+                    { mat.d.r, mat.d.g, mat.d.b } };
 
                 glm::vec4 rawVert = { triangle.verts[i].v.x,
                                       triangle.verts[i].v.y,
                                       triangle.verts[i].v.z, 1 };
 
+                glm::vec4 rtCol = { mat.d.r, mat.d.g, mat.d.b, 1 };
+
                 m_vertices.push_back( vert );
                 rtVertices.push_back( rawVert );
+                rtColors.push_back( rtCol );
                 m_indices.push_back( index );
                 index++;
             }
@@ -152,6 +162,14 @@ void Scene::loadModel( std::string name )
     bufferSize = rtVertices.size() * sizeof( rtVertices[0] );
     m_rtVertexBuffer = m_bufferAlloc.createDeviceBuffer(
         "RTVertex", bufferSize, rtVertices.data(), false,
+        vk::BufferUsageFlagBits::eStorageBuffer |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress |
+            vk::BufferUsageFlagBits::
+                eAccelerationStructureBuildInputReadOnlyKHR );
+
+    bufferSize = rtColors.size() * sizeof( rtColors[0] );
+    m_rtColorBuffer = m_bufferAlloc.createDeviceBuffer(
+        "RTColors", bufferSize, rtColors.data(), false,
         vk::BufferUsageFlagBits::eStorageBuffer |
             vk::BufferUsageFlagBits::eShaderDeviceAddress |
             vk::BufferUsageFlagBits::

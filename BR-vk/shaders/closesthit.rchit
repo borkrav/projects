@@ -25,6 +25,10 @@ layout(binding = 4, set = 0) buffer indices
 {
   uint i[];
 };
+layout(binding = 6, set = 0) buffer colors
+{
+  vec4 c[];
+};
 
 // barycentric weights of the intersection point
 hitAttributeEXT vec2 attribs;
@@ -45,6 +49,12 @@ void main()
   const vec3 v0 = v[i0].xyz;
   const vec3 v1 = v[i1].xyz;
   const vec3 v2 = v[i2].xyz;
+
+  //Fetch the 3 colors of the triagle
+  const vec3 c0 = c[i0].xyz;
+  const vec3 c1 = c[i1].xyz;
+  const vec3 c2 = c[i2].xyz;
+
 
 
   vec3 dir;
@@ -104,7 +114,7 @@ void main()
 
   if(gl_HitTEXT > 1e-15)
   {
-    rayResult.hitValue = vec3(0.9);
+    rayResult.hitValue = c0;
     rayResult.origin = worldSpaceIntersection;
     rayResult.direction = target - worldSpaceIntersection;
     rayResult.hit = true;
@@ -113,7 +123,7 @@ void main()
 
   else 
   {
-		rayResult.hitValue = vec3(0.9);
+		rayResult.hitValue = c0;
 		rayResult.hit = false;
 	}
 

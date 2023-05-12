@@ -87,7 +87,7 @@ void CameraManip::zoom( int x, int y )
     else
         sign = 1;
 
-    m_eye *= 1 + sign * zoomDistance * 0.005;
+    m_eye *= 1 + sign * zoomDistance * 0.05;
 
     m_distance = glm::length( m_at - m_eye );
 

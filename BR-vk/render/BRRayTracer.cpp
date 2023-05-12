@@ -39,7 +39,9 @@ void RayTracer::init()
             { 4, vk::DescriptorType::eStorageBuffer, 1,
               vk::ShaderStageFlagBits::eClosestHitKHR },
             { 5, vk::DescriptorType::eStorageBuffer, 1,
-              vk::ShaderStageFlagBits::eRaygenKHR } } );
+              vk::ShaderStageFlagBits::eRaygenKHR },
+            { 6, vk::DescriptorType::eStorageBuffer, 1,
+              vk::ShaderStageFlagBits::eClosestHitKHR } } );
 
     createPipeline();
 }
@@ -125,7 +127,8 @@ void RayTracer::createSBT()
 void RayTracer::createRTDescriptorSets( std::vector<vk::Buffer>& uniforms,
                                         vk::DescriptorPool pool,
                                         vk::Buffer vertexBuffer,
-                                        vk::Buffer indexBuffer )
+                                        vk::Buffer indexBuffer,
+                                        vk::Buffer colorBuffer )
 {
     m_rtDescriptorSets.push_back(
         m_descMgr.createSet( "RT Desc Set 1", m_rtDescriptorSetLayout, pool ) );
@@ -209,12 +212,27 @@ void RayTracer::createRTDescriptorSets( std::vector<vk::Buffer>& uniforms,
         accelBufferWrite.pImageInfo = nullptr;        // Optional
         accelBufferWrite.pTexelBufferView = nullptr;  // Optional
 
+        vk::DescriptorBufferInfo colorBufferInfo;
+        colorBufferInfo.buffer = colorBuffer;
+        colorBufferInfo.offset = 0;
+        colorBufferInfo.range = VK_WHOLE_SIZE;
+
+        vk::WriteDescriptorSet colorBufferWrite;
+        colorBufferWrite.dstSet = m_rtDescriptorSets[i];
+        colorBufferWrite.dstBinding = 6;
+        colorBufferWrite.dstArrayElement = 0;
+        colorBufferWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+        colorBufferWrite.descriptorCount = 1;
+        colorBufferWrite.pBufferInfo = &colorBufferInfo;
+        colorBufferWrite.pImageInfo = nullptr;        // Optional
+        colorBufferWrite.pTexelBufferView = nullptr;  // Optional
+
         std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
             asWrite, uniformBufferWrite, vertexBufferWrite, indexBufferWrite,
-            accelBufferWrite };
+            accelBufferWrite, colorBufferWrite };
 
         vkUpdateDescriptorSets(
-            m_device, 5, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
+            m_device, 6, (VkWriteDescriptorSet*)writeDescriptorSets.data(), 0,
             nullptr );
     }
 }

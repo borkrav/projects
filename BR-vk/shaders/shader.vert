@@ -9,13 +9,14 @@ layout(binding = 0) uniform UniformBufferObject {
 
 layout(location = 0) in vec3 inPosition; // in model space
 layout(location = 1) in vec3 inNormal; // in model space
+layout(location = 2) in vec3 inColor; // in model space
 
 layout(location = 0) out vec3 outColor;
 
 void main() {
 
     vec3 lightPos = vec3( 10, 10, 0 ); //in model space
-    vec3 objColor = vec3( 1, 0.5, 0 ); 
+    vec3 objColor = inColor; 
     vec3 ambient = vec3( 0.3, 0.3, 0.3);
 
     // the position of the light, in view space

@@ -197,8 +197,41 @@ void BRRender::initVulkan()
 {
     m_device = AppState::instance().getLogicalDevice();
 
+    // Original files
+    // m_scene.loadModel( "simple/Bugatti_type_35b.obj" );
+    // m_scene.loadModel( "simple/G70_modified_obj.obj" );
+    // m_scene.loadModel( "simple/mercedes.obj" );
+    // m_scene.loadModel( "simple/aston.obj" );
+    // m_scene.loadModel( "simple/Vazz.obj" );
+    // m_scene.loadModel( "simple/alpha.obj" );
+    // m_scene.loadModel( "simple/bed.obj" );
+    // m_scene.loadModel( "simple/OBJ_Car_buggy.obj" );
+    // m_scene.loadModel( "simple/sponza.obj" );
+    // m_scene.loadModel( "simple/Radio.obj" );
+    // m_scene.loadModel( "simple/armadillo.obj" );
+    // m_scene.loadModel( "simple/tyra.obj" );
+    // m_scene.loadModel( "simple/V01.obj" );
+    // m_scene.loadModel( "simple/bunny.obj" );
+    // m_scene.loadModel( "simple/house.obj" );
+    // m_scene.loadModel( "simple/wall.obj" );
+    // m_scene.loadModel( "simple/sphere.obj" );
+    // m_scene.loadModel( "simple/suzanne.obj" );
+    // m_scene.loadModel( "simple/room.obj" );
+    // m_scene.loadModel( "simple/jeep.obj" );
+    // m_scene.loadModel( "simple/cow.obj" );
+    // m_scene.loadModel( "simple/cornell.obj" );
+    // m_scene.loadModel( "simple/cube.obj" );
+
+    // m_scene.loadModel( "new/sdcc/building.obj" );
+    // m_scene.loadModel( "new/city/city.obj" );
+    // m_scene.loadModel( "new/doom/doom combat scene.obj" );
+    // m_scene.loadModel( "new/Z3_OBJ.obj" );
+    // m_scene.loadModel( "new/MERCEDES_AMG_GT_.obj" );
+    // m_scene.loadModel( "new/gtr/gtr.obj" );
+    // m_scene.loadModel( "new/cathedral/source/combined02.obj" );
+
     // No normals
-    // m_scene.loadModel( "CasualEffects/bedroom/iscv2.obj" ); 
+    // m_scene.loadModel( "CasualEffects/bedroom/iscv2.obj" );
     // m_scene.loadModel( "CasualEffects/cloud/cumulus00.obj" );
     // m_scene.loadModel( "CasualEffects/geodesic/geodesic_classI_20.obj" );
     // m_scene.loadModel( "CasualEffects/lpshead/head.obj" );
@@ -206,20 +239,29 @@ void BRRender::initVulkan()
     // m_scene.loadModel( "CasualEffects/sponza2/sponza.obj" );
     // m_scene.loadModel( "CasualEffects/teapot/teapot.obj" );
 
-    // Works
+    // Decent
     // m_scene.loadModel( "CasualEffects/bmw/bmw.obj" );
     // m_scene.loadModel( "CasualEffects/breakfast_room/breakfast_room.obj" );
+    // m_scene.loadModel( "CasualEffects/mitsuba/mitsuba.obj" );
+    // m_scene.loadModel( "CasualEffects/powerplant/powerplant.obj" );
+    // m_scene.loadModel( "CasualEffects/roadBike/roadBike.obj" );
+    // m_scene.loadModel( "CasualEffects/rungholt/house.obj" );
+    // m_scene.loadModel( "CasualEffects/rungholt/rungholt.obj" );
+    // m_scene.loadModel( "CasualEffects/salle_de_bain/salle_de_bain.obj" );
+    // m_scene.loadModel( "CasualEffects/sportsCar/sportsCar.obj" );
+    // m_scene.loadModel( "CasualEffects/vokselia_spawn/vokselia_spawn.obj" );
+    m_scene.loadModel( "new/911-turbo/source/911_scene.obj" );
+
+    // Works but doesn't look good
     // m_scene.loadModel( "CasualEffects/buddha/buddha.obj" );
     // m_scene.loadModel( "CasualEffects/bunny/bunny.obj" );
     // m_scene.loadModel( "CasualEffects/chestnut/AL05a.obj" );
     // m_scene.loadModel( "CasualEffects/conference/conference.obj" );
-    
-    //m_scene.loadModel( "CasualEffects/CornellBox/CornellBox-Water.obj" );
-    
+    // m_scene.loadModel( "CasualEffects/CornellBox/CornellBox-Water.obj" );
     // m_scene.loadModel( "CasualEffects/Cube/Cube.obj" );
     // m_scene.loadModel( "CasualEffects/dragon/dragon.obj" );
     // m_scene.loadModel( "CasualEffects/erato/erato.obj" );
-     m_scene.loadModel( "CasualEffects/bistro/Exterior/exterior.obj" );
+    // m_scene.loadModel( "CasualEffects/bistro/Exterior/exterior.obj" );
     // m_scene.loadModel( "CasualEffects/bistro/Interior/interior.obj" );
     // m_scene.loadModel( "CasualEffects/fireplace_room/fireplace_room.obj" );
     // m_scene.loadModel( "CasualEffects/gallery/gallery.obj" );
@@ -227,23 +269,13 @@ void BRRender::initVulkan()
     // m_scene.loadModel( "CasualEffects/holodeck/holodeck.obj" );
     // m_scene.loadModel( "CasualEffects/living_room/living_room.obj" );
     // m_scene.loadModel( "CasualEffects/lost-empire/lost_empire.obj" );
-    // m_scene.loadModel( "CasualEffects/mitsuba/mitsuba.obj" );
     // m_scene.loadModel( "CasualEffects/mori_knob/testObj.obj" );
     // m_scene.loadModel( "CasualEffects/pine/scrubPine.obj" );
-    // m_scene.loadModel( "CasualEffects/powerplant/powerplant.obj" );
-    // m_scene.loadModel( "CasualEffects/roadBike/roadBike.obj" );
-    // m_scene.loadModel( "CasualEffects/rungholt/house.obj" );
-    // m_scene.loadModel( "CasualEffects/rungholt/rungholt.obj" );
-    // m_scene.loadModel( "CasualEffects/salle_de_bain/salle_de_bain.obj" );
     // m_scene.loadModel( "CasualEffects/San_Miguel/san-miguel.obj" );
-    // m_scene.loadModel( "CasualEffects/sportsCar/sportsCar.obj" );
     // m_scene.loadModel( "CasualEffects/sphere/sphere-cubecoords.obj" );
     // m_scene.loadModel( "CasualEffects/sponza/sponza.obj" );
-    // m_scene.loadModel( "CasualEffects/vokselia_spawn/vokselia_spawn.obj" );
     // m_scene.loadModel( "CasualEffects/white_oak/white_oak.obj" );
-    
-    // m_scene.loadModel( "Bugatti_type_35b.obj" );
-     
+
     //Descriptor set stuff (pool and UBO for transformations)
     m_descriptorPool = m_descMgr.createPool(
         "Descriptor pool", 1000,
@@ -285,7 +317,8 @@ void BRRender::initVulkan()
     m_raytracer.createSBT();
     m_raytracer.createRTDescriptorSets( m_uniformBuffers, m_descriptorPool,
                                         m_scene.m_rtVertexBuffer,
-                                        m_scene.m_indexBuffer );
+                                        m_scene.m_indexBuffer, 
+                                        m_scene.m_rtColorBuffer );
 
     initUI();
 }
@@ -320,7 +353,7 @@ void BRRender::updateUniformBuffer( uint32_t currentImage )
     ubo.view = m_cameraManip.getMat();
     ubo.proj =
         glm::perspective( glm::radians( 45.0f ),
-                          extent.width / (float)extent.height, 0.1f, 10.0f );
+                          extent.width / (float)extent.height, 0.1f, 100000.0f );
     ubo.proj[1][1] *= -1;
     ubo.cameraPos = m_cameraManip.getEye();
     ubo.iteration = ++m_iteration;

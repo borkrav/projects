@@ -20,6 +20,7 @@ class Scene
     {
         glm::vec3 pos;
         glm::vec3 norm;
+        glm::vec3 col;
 
         // This defines how to read the data
         static vk::VertexInputBindingDescription getBindingDescription()
@@ -39,7 +40,7 @@ class Scene
         getAttributeDescriptions()
         {
             std::vector<vk::VertexInputAttributeDescription>
-                attributeDescriptions( 2,
+                attributeDescriptions( 3,
                                        vk::VertexInputAttributeDescription() );
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
@@ -49,6 +50,10 @@ class Scene
             attributeDescriptions[1].location = 1;
             attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
             attributeDescriptions[1].offset = offsetof( PipelineVertex, norm );
+            attributeDescriptions[2].binding = 0;
+            attributeDescriptions[2].location = 2;
+            attributeDescriptions[2].format = vk::Format::eR32G32B32Sfloat;
+            attributeDescriptions[2].offset = offsetof( PipelineVertex, col );
 
             return attributeDescriptions;
         }
@@ -106,6 +111,7 @@ class Scene
     vk::Buffer m_vertexBuffer;
     vk::Buffer m_rtVertexBuffer;
     vk::Buffer m_indexBuffer;
+    vk::Buffer m_rtColorBuffer;
 
     std::vector<PipelineVertex> m_vertices;
     std::vector<uint32_t> m_indices;
