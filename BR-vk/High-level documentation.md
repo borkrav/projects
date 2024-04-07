@@ -73,7 +73,7 @@
 - Points the attachment to memory locations
 
 
-# Rasterisation Pipeline
+# Rasterization Pipeline
 
 ## 1. Draw
 - Start of the pipeline
@@ -98,6 +98,7 @@
 
 ## 3. Vertex shader
 - Perform transformations to the vertex data
+- Moves the vertices into clip space
 
 ## 4. Tessellation Primitive Generation
 - Fixed function, breaks patch primitives into smaller primitives
@@ -117,7 +118,7 @@
 - Geometry processing is done
 - Group the vertices produced by the above into primitives
 - Clips and culls primitives, transforms into viewport
-- **Primitive refers to a sequence of vertices**
+- Converts the vertex sequences into base primitives ( point, line, triangle )
 
 ### Clipping and Culling
 - Fixed function, determines which primitives might contribute to the image, discards everything else
@@ -133,39 +134,18 @@
 
 
 ## 8. Rasterizer
-- Takes primitives and turns them into fragments
-- Projects triangles onto the screen, using perspective projection - 3D to 2D
-- Figure out which pixels the triangle covers, color the pixels
-- Iterate over every triangle
-- **Simply determine which pixels are inside each triangle**
-
-
-
-### More Rasterization notes
-- Algo hasn't really changed since the 1980s
-- Solves the visibility problem - which parts of 3D objects are visible to the camera
-- Can solve 2 ways
-1. Shoot ray through every pixel, find the closest intersection ( ray tracing alg )
-    - This is **image-centric** approach because we shoot rays from the camera into the scene
-
-```
-for each pixel
-    for each triangle
-        run intersection alg
-```
-2. Do the opposite **object-centric** 
-    - Project the triangles onto the screen - 3D to 2D
-    - Fill in the pixels of the image that are covered by that triangle
-
-```
-for each triangle
-    for each pixel
-        is the pixel inside the triangle?
-```
-
-- We can optimize this trivial algorithm by putting bounding boxes around the triangles
-- Minimum/maximum coordinates in the triangle, use 4 coordinates
- 
+- Takes base primitives ( point, line, triangle ) and turns them into fragments
+- Example for a triangle:
+- For each line in the triangle, run Bresenham's line algorithm
+- This algorithm takes a y = mx + b line, where m ( slope ) < 1
+- Algorithm samples each x value between the two end points
+- At each sample location, we either increment Y or not ( depending on which pixel is closer to the true value )
+- The clever part of this algorithm is it doesn't have floating point math, it does a simple integer calculation at every sample 
+- Now we have 2 end points, and n pixels between them
+- Interpolate the normal/color/whatever between the end points, writing the value at each sample
+- Fill in the triangle the same way, scanning horizontally across X, interpolating for the inner points
+- **a fragment is a pixel with those computed interpolated values**
+- The rasterizer will generate many fragments for the same pixel location, in any order, the depth tests job is to determine which fragment is the top ( visible ) one
 
 ### Raster modes
 #### depthClampEnable
@@ -184,9 +164,20 @@ for each triangle
 - The set of data necessary to generate a single pixel
 1. Raster Position
 2. Depth
-3. Color/texture/etc
+3. Color/texture/normal ( interpolated )
 4. Stencil
 5. Alpha
+
+### MSAA
+https://mynameismjp.wordpress.com/2012/10/24/msaa-overview/
+
+- Rough, high-level understanding:
+- Apply Wu's line algorithm
+- This gives you a line that has a gradients at each sample, for how close the pixel is to the line
+- Run the fragment shader normally, however your output buffer has N samples at each pixel
+- The gradient + filter ( sample position ) acts as a multiplier for the fragment output color, so for 4xMSAA, we fill 4 sample slots with the fragment output color, based on whether or not the sample slot is covered by the triangle.  
+- Resolve the MSAA buffer by determining what the final pixel color is, based on the filled sample slots, with some resolving algorithm
+- In essense, we have super-sampling, but only at fragment boundaries
 
 
 ## 9. Pre Fragment Operations
@@ -209,9 +200,26 @@ for each triangle
 - Allows mixing output pixels with pixels already in the framebuffer, instead of overwriting
 
 
+# Rasterization Architectures and Optimizations
+
+## 1. Forward rendering
+- As described above
+- Main issue is overdraw
+- The rasterizer generates N fragments for every pixel position. Even with early depth-testing, there is no guarantee that the fragment shader will only execute on the top-most fragment. Early depth tests check the depth of the fragment against the depth buffer, and execute the fragment/update the depth buffer if the depth test passes. So, if you are rasterizing triangles back to front, each successive depth test will pass, shading each fragment in the stack
+- Therefore, worst case, we can have N fragments * L lights * X * Y operations
+- We can avoid overdraw with a depth pre-pass. This runs the pipeline with no fragment shader and fills the depth buffer with the top-most fragment depth
+- In the main draw, the depth test discards any fragment that doesn't == whatever is already in the depth buffer
+- The issue with this approach is we do geometry processing twice, which isn't useful work
 
 
+## 2. Deferred rendering
+- Have the fragment shader output the interpolated fragment data ( normals, etc ) to buffers ( if the depth test passes ). This is called the GBuffer
+- Render a full screen quad, and compose the GBuffer into the final image, by doing the lighting computation on the data
+- This approach is memory intensive and not compatible with MSAA
 
+
+## 3. Forward+ rendering
+- Explanation here: https://github.com/bcrusco/Forward-Plus-Renderer
 
 
 # Raytracing Pipeline
